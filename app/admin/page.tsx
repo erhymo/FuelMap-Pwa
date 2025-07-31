@@ -14,6 +14,21 @@ import {
   doc
 } from "firebase/firestore";
 
+// --- Typing ---
+interface User {
+  id: string;
+  name: string;
+  pin: string;
+  createdAt?: any;
+}
+interface LogEntry {
+  id: string;
+  name: string;
+  action: string;
+  details: string;
+  timestamp: any;
+}
+
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
 export default function AdminPage() {
@@ -21,9 +36,9 @@ export default function AdminPage() {
   const [loginPass, setLoginPass] = useState("");
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [message, setMessage] = useState("");
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showLogs, setShowLogs] = useState(false);
 
   useEffect(() => {
@@ -36,16 +51,22 @@ export default function AdminPage() {
   async function loadUsers() {
     const q = query(collection(db, "users"));
     const snap = await getDocs(q);
-    setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    setUsers(snap.docs.map(doc => ({
+      id: doc.id,
+      ...(doc.data() as Omit<User, "id">)
+    })));
   }
 
   async function loadLogs() {
     const q = query(collection(db, "logs"), orderBy("timestamp", "desc"));
     const snap = await getDocs(q);
-    setLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    setLogs(snap.docs.map(doc => ({
+      id: doc.id,
+      ...(doc.data() as Omit<LogEntry, "id">)
+    })));
   }
 
-  async function handleAddUser(e: any) {
+  async function handleAddUser(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage("");
 
@@ -78,7 +99,7 @@ export default function AdminPage() {
     loadUsers();
   }
 
-  function handleLogin(e: any) {
+  function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (loginPass === ADMIN_PASS) {
       setLoggedIn(true);
@@ -90,17 +111,19 @@ export default function AdminPage() {
 
   if (!loggedIn) {
     return (
-      <form onSubmit={handleLogin} className="flex flex-col items-center justify-center min-h-screen gap-4 bg-black">
-        <div className="text-2xl font-bold mb-2 text-gray-900">Admin Login</div>
+      <form onSubmit={handleLogin} className="flex flex-col items-center justify-center min-h-screen gap-6 bg-black">
+        <div className="text-4xl font-bold mb-6 text-white drop-shadow">Admin Login</div>
         <input
           type="password"
           placeholder="Admin-passord"
-          className="border p-2 rounded text-xl text-gray-900"
+          className="border border-gray-400 p-4 rounded text-2xl text-black bg-white placeholder-gray-500 focus:outline-none focus:border-blue-500 shadow"
           value={loginPass}
           onChange={e => setLoginPass(e.target.value)}
         />
-        <button className="bg-blue-600 text-white px-6 py-2 rounded text-lg">Logg inn</button>
-        {message && <div className="text-red-600">{message}</div>}
+        <button className="bg-blue-600 text-white px-10 py-3 rounded text-2xl font-bold shadow hover:bg-blue-700 transition">
+          Logg inn
+        </button>
+        {message && <div className="text-red-400 mt-2">{message}</div>}
       </form>
     );
   }
