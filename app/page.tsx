@@ -24,7 +24,6 @@ export default function Home() {
       setError("Feil PIN-kode.");
       return;
     }
-    // Lagre session til localStorage
     const user = snap.docs[0].data();
     localStorage.setItem("fuelmap_session", JSON.stringify({
       name: user.name,
@@ -36,17 +35,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-100 to-blue-200">
-      <div className="mb-8 bg-white p-4 rounded shadow">
+      <div className="mb-10">
         <Image
           src="/Airlift-logo.png"
           alt="Airlift logo"
-          width={340}
-          height={100}
+          width={320}
+          height={90}
           priority
         />
       </div>
-      <form onSubmit={handleLogin} className="w-full max-w-sm flex flex-col gap-4 bg-white p-6 rounded shadow">
-        <h2 className="text-2xl font-bold text-center mb-2">Logg inn med PIN</h2>
+      <form
+        onSubmit={handleLogin}
+        className="bg-white shadow-xl rounded-xl p-8 flex flex-col items-center gap-6 min-w-[340px]"
+      >
+        <h2 className="text-2xl font-bold mb-3 text-blue-900">Logg inn med PIN</h2>
         <input
           type="password"
           inputMode="numeric"
@@ -59,7 +61,7 @@ export default function Home() {
         />
         <button
           type="submit"
-          className="bg-blue-700 hover:bg-blue-800 text-white py-3 rounded text-xl font-bold"
+          className="bg-blue-700 hover:bg-blue-800 text-white py-3 rounded text-xl font-bold w-full"
         >
           Logg inn
         </button>
