@@ -37,7 +37,7 @@ interface Pin {
   trailer: number;
   equipment: string;
   images: string[];
-  createdAt?: any; // Firestore Timestamp
+  createdAt?: any;
 }
 
 // Midtpunkt for Norge
@@ -45,7 +45,6 @@ const center = { lat: 60.472, lng: 8.4689 };
 const mapContainerStyle = { width: "100%", height: "100vh" };
 
 export default function Dashboard() {
-  // --- Auth ---
   const router = useRouter();
   useEffect(() => {
     const session = localStorage.getItem("fuelmap_session");
@@ -449,7 +448,6 @@ export default function Dashboard() {
               {/* Bilder */}
               <div className="flex flex-wrap gap-2 my-2">
                 {selected.images?.map((img: string, i: number) => (
-                  // <Image /> anbefales av Next, men <img> brukes for enkelhet nå
                   <img key={i} src={img} alt="" className="rounded w-20 h-20 object-cover" />
                 ))}
               </div>
