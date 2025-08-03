@@ -126,37 +126,34 @@ export default function Dashboard() {
   };
 
   // --- Juster logikk for fat ---
-  const adjustBarrels = async (
-    pin: Pin,
+  const adjustBarrels = (
     field: "fullBarrels" | "emptyBarrels",
     delta: number
   ) => {
-    let full = pin.fullBarrels || 0;
-    let empty = pin.emptyBarrels || 0;
-    if (field === "fullBarrels") {
-      if (delta > 0 && empty > 0) {
-        full++;
-        empty--;
-      } else if (delta < 0 && full > 0) {
-        full--;
-        empty++;
+    setEditValues(prev => {
+      let full = Number(prev.fullBarrels ?? selected?.fullBarrels ?? 0);
+      let empty = Number(prev.emptyBarrels ?? selected?.emptyBarrels ?? 0);
+
+      if (field === "fullBarrels") {
+        if (delta > 0 && empty > 0) {
+          full++;
+          empty--;
+        } else if (delta < 0 && full > 0) {
+          full--;
+          empty++;
+        }
       }
-    }
-    if (field === "emptyBarrels") {
-      if (delta > 0 && full > 0) {
-        empty++;
-        full--;
-      } else if (delta < 0 && empty > 0) {
-        empty--;
-        full++;
+      if (field === "emptyBarrels") {
+        if (delta > 0 && full > 0) {
+          empty++;
+          full--;
+        } else if (delta < 0 && empty > 0) {
+          empty--;
+          full++;
+        }
       }
-    }
-    await updateDoc(doc(db, "pins", pin.id), {
-      fullBarrels: full,
-      emptyBarrels: empty,
+      return { ...prev, fullBarrels: full, emptyBarrels: empty };
     });
-    // Oppdater visning umiddelbart
-    setSelected({ ...pin, fullBarrels: full, emptyBarrels: empty });
   };
 
   const handleManualEdit = async (pin: Pin) => {
@@ -322,8 +319,8 @@ export default function Dashboard() {
             onCloseClick={() => setSelected(null)}
           >
             <div
-              className="flex flex-col justify-between w-[360px] max-w-full p-6 bg-white rounded-2xl text-black"
-              style={{ minHeight: 360, maxHeight: 420, overflow: "visible" }}
+              className="flex flex-col justify-between w-[380px] max-w-full p-6 bg-white rounded-2xl text-black"
+              style={{ minHeight: 360, maxHeight: 440, overflow: "visible" }}
             >
               <div className="flex flex-row justify-between items-center mb-2">
                 <span className="font-bold text-3xl">{selected.name || "Uten navn"}</span>
@@ -337,7 +334,7 @@ export default function Dashboard() {
                 )}
                 {editMode && (
                   <button
-                    onClick={() => setEditMode(false)}
+                    onClick={() => { setEditMode(false); setEditValues({}); }}
                     className="bg-blue-600 text-white px-6 py-2 rounded text-xl font-bold ml-4"
                   >
                     Avslutt
@@ -346,6 +343,7 @@ export default function Dashboard() {
               </div>
               {/* --- Fulle/Tomme i to kolonner --- */}
               <div className="flex flex-row justify-between items-end gap-6 mb-4 mt-1">
+                {/* Fulle fat */}
                 <div className="flex flex-col items-center flex-1">
                   <span className="font-bold text-green-700 text-xl">Fulle</span>
                   {!editMode ? (
@@ -363,18 +361,19 @@ export default function Dashboard() {
                         onClick={e => (e.target as HTMLInputElement).select()}
                       />
                       <button
-                        className="bg-green-500 text-white text-2xl rounded-full w-9 h-9 flex items-center justify-center ml-1"
-                        onClick={() => adjustBarrels(selected, "fullBarrels", 1)}
+                        className="bg-green-500 text-white text-2xl rounded-full w-12 h-12 flex items-center justify-center ml-2"
+                        onClick={() => adjustBarrels("fullBarrels", 1)}
                         tabIndex={-1}
                       >+</button>
                       <button
-                        className="bg-red-500 text-white text-2xl rounded-full w-9 h-9 flex items-center justify-center ml-1"
-                        onClick={() => adjustBarrels(selected, "fullBarrels", -1)}
+                        className="bg-red-500 text-white text-2xl rounded-full w-12 h-12 flex items-center justify-center ml-2"
+                        onClick={() => adjustBarrels("fullBarrels", -1)}
                         tabIndex={-1}
                       >–</button>
                     </div>
                   )}
                 </div>
+                {/* Tomme fat */}
                 <div className="flex flex-col items-center flex-1">
                   <span className="font-bold text-red-700 text-xl">Tomme</span>
                   {!editMode ? (
@@ -392,39 +391,83 @@ export default function Dashboard() {
                         onClick={e => (e.target as HTMLInputElement).select()}
                       />
                       <button
-                        className="bg-green-500 text-white text-2xl rounded-full w-9 h-9 flex items-center justify-center ml-1"
-                        onClick={() => adjustBarrels(selected, "emptyBarrels", 1)}
+                        className="bg-green-500 text-white text-2xl rounded-full w-12 h-12 flex items-center justify-center ml-2"
+                        onClick={() => adjustBarrels("emptyBarrels", 1)}
                         tabIndex={-1}
                       >+</button>
                       <button
-                        className="bg-red-500 text-white text-2xl rounded-full w-9 h-9 flex items-center justify-center ml-1"
-                        onClick={() => adjustBarrels(selected, "emptyBarrels", -1)}
+                        className="bg-red-500 text-white text-2xl rounded-full w-12 h-12 flex items-center justify-center ml-2"
+                        onClick={() => adjustBarrels("emptyBarrels", -1)}
                         tabIndex={-1}
                       >–</button>
                     </div>
                   )}
                 </div>
               </div>
-              {/* --- Resten --- */}
+              {/* --- Redigerbare felter for fuelhenger, fueltank, utstyr --- */}
               <div className="mt-2 mb-2 text-xl">
-                <div>Fuelhenger: <span className="font-bold">{selected.trailer || 0} liter</span></div>
-                <div>Fueltank: <span className="font-bold">{selected.tank || 0} liter</span></div>
-                <div>Utstyr: <span className="font-bold whitespace-pre-wrap">{selected.equipment || ""}</span></div>
+                {editMode ? (
+                  <>
+                    <div className="flex items-center mb-2">
+                      Fuelhenger:
+                      <input
+                        type="number"
+                        value={editValues.trailer ?? selected.trailer ?? 0}
+                        min={0}
+                        className="border rounded text-xl w-24 ml-2 p-1"
+                        onChange={e => setEditValues({ ...editValues, trailer: e.target.value })}
+                        onClick={e => (e.target as HTMLInputElement).select()}
+                      />
+                      <span className="ml-2">liter</span>
+                    </div>
+                    <div className="flex items-center mb-2">
+                      Fueltank:
+                      <input
+                        type="number"
+                        value={editValues.tank ?? selected.tank ?? 0}
+                        min={0}
+                        className="border rounded text-xl w-24 ml-2 p-1"
+                        onChange={e => setEditValues({ ...editValues, tank: e.target.value })}
+                        onClick={e => (e.target as HTMLInputElement).select()}
+                      />
+                      <span className="ml-2">liter</span>
+                    </div>
+                    <div className="flex items-center mb-2">
+                      Utstyr:
+                      <textarea
+                        className="border rounded text-xl w-40 ml-2 p-1"
+                        rows={1}
+                        value={editValues.equipment ?? selected.equipment}
+                        onChange={e => setEditValues({ ...editValues, equipment: e.target.value })}
+                        onClick={e => (e.target as HTMLTextAreaElement).select()}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>Fuelhenger: <span className="font-bold">{selected.trailer || 0} liter</span></div>
+                    <div>Fueltank: <span className="font-bold">{selected.tank || 0} liter</span></div>
+                    <div>Utstyr: <span className="font-bold whitespace-pre-wrap">{selected.equipment || ""}</span></div>
+                  </>
+                )}
               </div>
+              {/* --- LAGRE/DELETE --- */}
               {editMode && (
                 <button
                   onClick={() => handleManualEdit(selected)}
-                  className="mt-3 mb-2 bg-green-600 text-white px-6 py-2 rounded text-xl font-bold"
+                  className="w-full bg-green-600 text-white py-3 rounded-lg text-2xl font-bold mt-1"
                 >
                   Lagre
                 </button>
               )}
-              <button
-                onClick={() => deletePin(selected)}
-                className="mt-2 bg-red-600 text-white px-8 py-2 rounded text-xl font-bold self-end"
-              >
-                Slett
-              </button>
+              <div className="w-full flex justify-end mt-2">
+                <button
+                  onClick={() => deletePin(selected)}
+                  className="bg-red-600 text-white py-2 px-8 rounded-lg text-2xl font-bold"
+                >
+                  Slett
+                </button>
+              </div>
             </div>
           </InfoWindowF>
         )}
