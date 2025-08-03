@@ -104,6 +104,8 @@ export default function Dashboard() {
       setAddMode(false);
     } else {
       setSelected(null);
+      setEditMode(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -129,6 +131,7 @@ export default function Dashboard() {
     await deleteDoc(doc(db, "pins", pin.id));
     setShowDeleteConfirm(false);
     setSelected(null);
+    setEditMode(false);
   };
 
   const handleManualEdit = async (pin: Pin) => {
@@ -151,27 +154,28 @@ export default function Dashboard() {
     if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">) });
   };
 
-  const adjustBarrels = async (
+  // Pluss/minus fat (edit-modus)
+  const adjustBarrels = (
     pin: Pin,
     field: "fullBarrels" | "emptyBarrels",
     delta: number
   ) => {
-    let newFull = pin.fullBarrels;
-    let newEmpty = pin.emptyBarrels;
+    let newFull = editValues.fullBarrels ?? pin.fullBarrels;
+    let newEmpty = editValues.emptyBarrels ?? pin.emptyBarrels;
 
     if (field === "fullBarrels") {
-      if (delta > 0 && pin.emptyBarrels > 0) {
+      if (delta > 0 && newEmpty > 0) {
         newFull += 1;
         newEmpty -= 1;
-      } else if (delta < 0 && pin.fullBarrels > 0) {
+      } else if (delta < 0 && newFull > 0) {
         newFull -= 1;
         newEmpty += 1;
       }
     } else {
-      if (delta > 0 && pin.fullBarrels > 0) {
+      if (delta > 0 && newFull > 0) {
         newEmpty += 1;
         newFull -= 1;
-      } else if (delta < 0 && pin.emptyBarrels > 0) {
+      } else if (delta < 0 && newEmpty > 0) {
         newEmpty -= 1;
         newFull += 1;
       }
@@ -180,12 +184,6 @@ export default function Dashboard() {
     newFull = Math.max(0, newFull);
     newEmpty = Math.max(0, newEmpty);
 
-    await updateDoc(doc(db, "pins", pin.id), {
-      fullBarrels: newFull,
-      emptyBarrels: newEmpty,
-    });
-
-    setSelected({ ...pin, fullBarrels: newFull, emptyBarrels: newEmpty });
     setEditValues((v) => ({
       ...v,
       fullBarrels: newFull,
@@ -199,6 +197,8 @@ export default function Dashboard() {
       mapRef.current.setZoom(13);
       setSelected(pin);
       setDropdownOpen(false);
+      setEditMode(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -275,7 +275,11 @@ export default function Dashboard() {
           <MarkerF
             key={pin.id}
             position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
-            onClick={() => setSelected(pin)}
+            onClick={() => {
+              setSelected(pin);
+              setEditMode(false);
+              setShowDeleteConfirm(false);
+            }}
             icon={{
               url:
                 pin.type === "base"
@@ -401,29 +405,16 @@ export default function Dashboard() {
                       border: "none"
                     }}
                   >
-                    Edit
+                    Rediger
                   </button>
                 )}
               </div>
-              {/* Fulle og Tomme */}
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-                alignItems: "center",
-                marginBottom: 3,
-                fontSize: 14
-              }}>
-                <div style={{ color: "#059669" }}>Fulle: <b>{selected.fullBarrels}</b></div>
-                <div style={{ color: "#dc2626" }}>Tomme: <b>{selected.emptyBarrels}</b></div>
-              </div>
-              {/* Fuel og utstyr */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 14 }}>
-                <div>Henger: <b>{selected.trailer || 0} L</b></div>
-                <div>Tank: <b>{selected.tank || 0} L</b></div>
-                <div>Utstyr: <b>{selected.equipment || "-"}</b></div>
-                {selected.note && <div>Notat: <b>{selected.note}</b></div>}
-              </div>
+              <div style={{ color: "#059669", marginBottom: 1 }}>Fulle: <b>{selected.fullBarrels}</b></div>
+              <div style={{ color: "#dc2626", marginBottom: 6 }}>Tomme: <b>{selected.emptyBarrels}</b></div>
+              <div>Henger: <b>{selected.trailer || 0} L</b></div>
+              <div>Tank: <b>{selected.tank || 0} L</b></div>
+              <div>Utstyr: <b>{selected.equipment || "-"}</b></div>
+              {selected.note && <div>Notat: <b>{selected.note}</b></div>}
               {/* Edit mode */}
               {editMode && (
                 <div style={{
