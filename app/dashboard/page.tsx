@@ -32,12 +32,12 @@ interface Pin {
   emptyBarrels: number;
   tank: number;
   trailer: number;
-  equipment: string[]; // Endret til array
+  equipment: string[];
   images: string[];
   createdAt?: any;
 }
 
-// For å støtte eksisterende pins der equipment er string:
+// For backward comp
 function ensureArray(equipment: string | string[] | undefined): string[] {
   if (!equipment) return [];
   if (Array.isArray(equipment)) return equipment;
@@ -150,12 +150,10 @@ export default function Dashboard() {
     for (const field in editValues) {
       let value = (editValues as any)[field];
       if (field === "equipment" || field === "newEquipment") continue;
-      if (field === "equipmentArr") continue;
       value = Number(value);
       if (isNaN(value)) continue;
       updateData[field] = value;
     }
-    // equipment-array
     if (editValues.equipment) updateData.equipment = editValues.equipment;
     await updateDoc(doc(db, "pins", pin.id), updateData);
     setEditValues({});
@@ -164,7 +162,6 @@ export default function Dashboard() {
     if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">), equipment: ensureArray(updatedPin.equipment) });
   };
 
-  // Pluss/minus fat (edit-modus)
   const adjustBarrels = (
     pin: Pin,
     field: "fullBarrels" | "emptyBarrels",
@@ -463,14 +460,13 @@ export default function Dashboard() {
               {editMode && (
                 <form
                   onSubmit={(e) => { e.preventDefault(); handleManualEdit(selected); }}
-                  style={{ display: "flex", flexDirection: "column", gap: 11, marginTop: 7 }}
+                  style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 7 }}
                 >
                   <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 5, textAlign: "center" }}>
                     {selected.name || "Uten navn"}
                   </div>
-                  {/* Fulle/Tomme på én linje */}
-                  <div style={{ display: "flex", gap: 16, alignItems: "center", justifyContent: "center" }}>
-                    {/* Fulle */}
+                  {/* Fulle */}
+                  <div style={{ display: "flex", gap: 11, alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
                     <span style={{ color: "#059669", fontSize: 16, minWidth: 54 }}>Fulle</span>
                     <button
                       type="button"
@@ -478,9 +474,9 @@ export default function Dashboard() {
                         background: "#22c55e",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 32,
-                        height: 32,
-                        fontSize: 21,
+                        width: 44,
+                        height: 44,
+                        fontSize: 27,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -490,10 +486,10 @@ export default function Dashboard() {
                     <input
                       type="number"
                       style={{
-                        width: 45,
+                        width: 50,
                         textAlign: "center",
                         fontWeight: 800,
-                        fontSize: 17
+                        fontSize: 19
                       }}
                       value={
                         editValues.fullBarrels !== undefined
@@ -521,26 +517,28 @@ export default function Dashboard() {
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 32,
-                        height: 32,
-                        fontSize: 21,
+                        width: 44,
+                        height: 44,
+                        fontSize: 27,
                         border: "none",
                         fontWeight: 800
                       }}
                       onClick={() => adjustBarrels(selected, "fullBarrels", -1)}
                       tabIndex={-1}
                     >–</button>
-                    {/* Tomme */}
-                    <span style={{ color: "#dc2626", fontSize: 16, minWidth: 54, marginLeft: 16 }}>Tomme</span>
+                  </div>
+                  {/* Tomme */}
+                  <div style={{ display: "flex", gap: 11, alignItems: "center", justifyContent: "center", marginBottom: 7 }}>
+                    <span style={{ color: "#dc2626", fontSize: 16, minWidth: 54 }}>Tomme</span>
                     <button
                       type="button"
                       style={{
                         background: "#22c55e",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 32,
-                        height: 32,
-                        fontSize: 21,
+                        width: 44,
+                        height: 44,
+                        fontSize: 27,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -550,10 +548,10 @@ export default function Dashboard() {
                     <input
                       type="number"
                       style={{
-                        width: 45,
+                        width: 50,
                         textAlign: "center",
                         fontWeight: 800,
-                        fontSize: 17
+                        fontSize: 19
                       }}
                       value={
                         editValues.emptyBarrels !== undefined
@@ -581,9 +579,9 @@ export default function Dashboard() {
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 32,
-                        height: 32,
-                        fontSize: 21,
+                        width: 44,
+                        height: 44,
+                        fontSize: 27,
                         border: "none",
                         fontWeight: 800
                       }}
