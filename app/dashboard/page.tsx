@@ -25,7 +25,7 @@ interface Pin {
   id: string;
   lat: number;
   lng: number;
-  type: "base" | "fueldepot";
+  type: "base" | "fueldepot" | "helipad";
   name: string;
   note?: string;
   fullBarrels: number;
@@ -37,7 +37,6 @@ interface Pin {
   createdAt?: any;
 }
 
-// For backward comp
 function ensureArray(equipment: string | string[] | undefined): string[] {
   if (!equipment) return [];
   if (Array.isArray(equipment)) return equipment;
@@ -68,7 +67,7 @@ export default function Dashboard() {
   const [addMode, setAddMode] = useState(false);
   const [pins, setPins] = useState<Pin[]>([]);
   const [selected, setSelected] = useState<(Pin & { editing?: boolean }) | null>(null);
-  const [newType, setNewType] = useState<"base" | "fueldepot">("base");
+  const [newType, setNewType] = useState<"base" | "fueldepot" | "helipad">("base");
   const [newName, setNewName] = useState("");
   const [newNote, setNewNote] = useState("");
   const [editValues, setEditValues] = useState<Partial<Pin> & { newEquipment?: string }>({});
@@ -98,7 +97,7 @@ export default function Dashboard() {
         id: "",
         lat: e.latLng.lat(),
         lng: e.latLng.lng(),
-        type: "base",
+        type: newType,
         name: "",
         note: "",
         fullBarrels: 0,
@@ -109,9 +108,6 @@ export default function Dashboard() {
         images: [],
         editing: true,
       });
-      setNewType("base");
-      setNewName("");
-      setNewNote("");
       setAddMode(false);
     } else {
       setSelected(null);
@@ -256,7 +252,6 @@ export default function Dashboard() {
           <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-72 overflow-y-auto mt-2">
             <div className="mb-2 text-2xl font-extrabold text-black">Alle depoter:</div>
             {pins
-              .filter((p) => p.type === "fueldepot")
               .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
               .map((pin) => (
                 <div
@@ -266,14 +261,21 @@ export default function Dashboard() {
                 >
                   <span className="font-bold text-lg text-black">{pin.name}</span>
                   <span className="ml-auto flex flex-row items-center gap-3">
-                    <span className="flex flex-row items-center gap-1">
-                      <span className="text-xs text-green-600 font-bold">F</span>
-                      <span className="underline text-green-600 font-extrabold text-lg">{pin.fullBarrels}</span>
-                    </span>
-                    <span className="flex flex-row items-center gap-1">
-                      <span className="text-xs text-red-600 font-bold">T</span>
-                      <span className="underline text-red-600 font-extrabold text-lg">{pin.emptyBarrels}</span>
-                    </span>
+                    {pin.type === "fueldepot" && (
+                      <>
+                        <span className="flex flex-row items-center gap-1">
+                          <span className="text-xs text-green-600 font-bold">F</span>
+                          <span className="underline text-green-600 font-extrabold text-lg">{pin.fullBarrels}</span>
+                        </span>
+                        <span className="flex flex-row items-center gap-1">
+                          <span className="text-xs text-red-600 font-bold">T</span>
+                          <span className="underline text-red-600 font-extrabold text-lg">{pin.emptyBarrels}</span>
+                        </span>
+                      </>
+                    )}
+                    {pin.type === "helipad" && (
+                      <img src="/helipad-yellow.svg" alt="helipad" style={{ width: 30, height: 30 }} />
+                    )}
                   </span>
                 </div>
               ))}
@@ -311,9 +313,11 @@ export default function Dashboard() {
               url:
                 pin.type === "base"
                   ? "https://maps.google.com/mapfiles/kml/shapes/heliport.png"
-                  : pin.fullBarrels > 2
-                  ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                  : "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                  : pin.type === "fueldepot"
+                    ? (pin.fullBarrels > 2
+                        ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                        : "http://maps.google.com/mapfiles/ms/icons/red-dot.png")
+                    : "/helipad-yellow.svg",
               scaledSize: new google.maps.Size(48, 48),
             }}
           />
@@ -331,11 +335,12 @@ export default function Dashboard() {
                   Type:{" "}
                   <select
                     value={newType}
-                    onChange={(e) => setNewType(e.target.value as "base" | "fueldepot")}
+                    onChange={(e) => setNewType(e.target.value as "base" | "fueldepot" | "helipad")}
                     className="text-xl p-2 border text-black font-extrabold"
                   >
                     <option value="base">Base</option>
                     <option value="fueldepot">Fueldepot</option>
+                    <option value="helipad">Helipad</option>
                   </select>
                 </label>
               </div>
