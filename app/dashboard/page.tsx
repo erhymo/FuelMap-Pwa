@@ -15,13 +15,10 @@ import {
   onSnapshot,
   serverTimestamp,
   updateDoc,
-  arrayUnion,
   getDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 
 // --- TYPER ---
 interface Pin {
@@ -37,7 +34,7 @@ interface Pin {
   trailer: number;
   equipment: string;
   images: string[];
-  createdAt?: any; // Firestore Timestamp
+  createdAt?: any;
 }
 
 // Midtpunkt for Norge
@@ -135,15 +132,6 @@ export default function Dashboard() {
   // --- Slett punkt ---
   const deletePin = async (pin: Pin) => {
     await deleteDoc(doc(db, "pins", pin.id));
-    if (pin.images?.length) {
-      for (const url of pin.images) {
-        const path = url.split("%2F")[1]?.split("?")[0];
-        if (path) {
-          const refToDelete = ref(storage, `images/${path}`);
-          await deleteObject(refToDelete).catch(() => {});
-        }
-      }
-    }
     setSelected(null);
   };
 
@@ -169,24 +157,35 @@ export default function Dashboard() {
     if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">) });
   };
 
-  // --- Pluss/minus fat med logikk ---
-  const adjustBarrels = async (pin: Pin, field: "fullBarrels" | "emptyBarrels", delta: number) => {
-    let full = pin.fullBarrels || 0;
-    let empty = pin.emptyBarrels || 0;
+  // --- Pluss/minus fat ---
+  const adjustBarrels = async (
+    pin: Pin,
+    field: "fullBarrels" | "emptyBarrels",
+    delta: number
+  ) => {
+    let newFull = pin.fullBarrels;
+    let newEmpty = pin.emptyBarrels;
 
     if (field === "fullBarrels") {
-      full = Math.max(0, full + delta);
-      empty = Math.max(0, empty - delta);
+      newFull += delta;
+      if (delta > 0 && newEmpty > 0) newEmpty -= 1;
+      if (delta < 0) newEmpty += 1;
     } else {
-      empty = Math.max(0, empty + delta);
-      full = Math.max(0, full - delta);
+      newEmpty += delta;
+      if (delta > 0 && newFull > 0) newFull -= 1;
+      if (delta < 0) newFull += 1;
     }
 
-    await updateDoc(doc(db, "pins", pin.id), { fullBarrels: full, emptyBarrels: empty });
-  };
+    newFull = Math.max(0, newFull);
+    newEmpty = Math.max(0, newEmpty);
 
-  // --- Bildeopplasting --- (utgår for nå, ikke synlig)
-  // const uploadImage = async (pin: Pin, file: File) => { ... }
+    await updateDoc(doc(db, "pins", pin.id), {
+      fullBarrels: newFull,
+      emptyBarrels: newEmpty,
+    });
+
+    setSelected({ ...pin, fullBarrels: newFull, emptyBarrels: newEmpty });
+  };
 
   // --- Zoom til depot ---
   const flyTo = (pin: Pin) => {
@@ -198,7 +197,7 @@ export default function Dashboard() {
     }
   };
 
-  // --- Start edit (kopierer valgte felter til editValues) ---
+  // --- Start edit ---
   const startEdit = (pin: Pin) => {
     setEditMode(true);
     setEditValues({
@@ -219,10 +218,12 @@ export default function Dashboard() {
         <button
           className="bg-white rounded-full shadow p-3 mb-2 text-3xl font-bold"
           onClick={() => setDropdownOpen(!dropdownOpen)}
-        >☰</button>
+        >
+          ☰
+        </button>
         {dropdownOpen && (
-          <div className="bg-white shadow-lg rounded-lg p-4 max-h-[70vh] w-72 overflow-y-auto mt-2">
-            <div className="mb-2 text-2xl font-bold">Alle depoter:</div>
+          <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-64 overflow-y-auto mt-2">
+            <div className="mb-2 text-2xl font-bold text-black">Alle depoter:</div>
             {pins
               .filter((p) => p.type === "fueldepot")
               .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
@@ -232,19 +233,19 @@ export default function Dashboard() {
                   className="flex items-center gap-2 px-2 py-2 rounded hover:bg-green-100 cursor-pointer"
                   onClick={() => flyTo(pin)}
                 >
-                  <span className="font-semibold text-lg">{pin.name}</span>
-                  <div className="flex flex-col text-right ml-auto mr-2">
-                    <span className="flex items-end gap-4">
-                      <span className="flex flex-col items-center mr-1">
-                        <span className="text-green-600 text-sm font-bold">F</span>
-                        <span className="text-green-600 border-b-2 border-green-500">{pin.fullBarrels}</span>
+                  <span className="font-semibold text-lg text-black">{pin.name}</span>
+                  <span className="ml-auto flex flex-col items-end">
+                    <span>
+                      <span className="mr-2 flex flex-col items-center">
+                        <span className="text-xs text-green-600 font-bold">F</span>
+                        <span className="underline text-green-600 font-bold">{pin.fullBarrels}</span>
                       </span>
                       <span className="flex flex-col items-center">
-                        <span className="text-red-600 text-sm font-bold">T</span>
-                        <span className="text-red-600 border-b-2 border-red-500">{pin.emptyBarrels}</span>
+                        <span className="text-xs text-red-600 font-bold">T</span>
+                        <span className="underline text-red-600 font-bold">{pin.emptyBarrels}</span>
                       </span>
                     </span>
-                  </div>
+                  </span>
                 </div>
               ))}
           </div>
@@ -254,7 +255,9 @@ export default function Dashboard() {
           className="bg-green-500 text-white rounded-full shadow p-4 text-4xl mt-3"
           onClick={() => setAddMode(true)}
           title="Legg til nytt depot"
-        >+</button>
+        >
+          +
+        </button>
       </div>
       {/* --- KART --- */}
       <GoogleMap
@@ -262,7 +265,9 @@ export default function Dashboard() {
         center={center}
         zoom={6}
         onClick={handleMapClick}
-        onLoad={(map) => { mapRef.current = map; }}
+        onLoad={(map) => {
+          mapRef.current = map;
+        }}
       >
         {pins.map((pin) => (
           <MarkerF
@@ -280,14 +285,13 @@ export default function Dashboard() {
             }}
           />
         ))}
-
         {/* --- Nytt punkt --- */}
         {selected?.editing && (
           <InfoWindowF
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
           >
-            <div className="p-3 text-2xl min-w-[320px] max-w-[370px]">
+            <div className="p-3 text-2xl font-semibold text-black">
               <div className="mb-2 font-bold">Nytt punkt</div>
               <div>
                 <label>
@@ -295,7 +299,7 @@ export default function Dashboard() {
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as "base" | "fueldepot")}
-                    className="text-xl p-2 border"
+                    className="text-xl p-2 border text-black"
                   >
                     <option value="base">Base</option>
                     <option value="fueldepot">Fueldepot</option>
@@ -305,7 +309,7 @@ export default function Dashboard() {
               <div className="mt-2">
                 Navn:{" "}
                 <input
-                  className="border p-2 text-xl"
+                  className="border p-2 text-xl text-black"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                 />
@@ -313,7 +317,7 @@ export default function Dashboard() {
               <div className="mt-2">
                 Notat:{" "}
                 <input
-                  className="border p-2 text-xl"
+                  className="border p-2 text-xl text-black"
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                 />
@@ -335,163 +339,161 @@ export default function Dashboard() {
             onCloseClick={() => setSelected(null)}
           >
             <div
-              className="flex flex-col p-6 rounded-2xl shadow-lg bg-white min-w-[340px] max-w-[420px] max-h-[95vh]"
-              style={{ fontSize: '1.6rem', boxSizing: 'border-box', overflow: "visible" }}
+              className="p-5 rounded-xl text-black"
+              style={{
+                background: "#fff",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                maxWidth: 380,
+                minWidth: 290,
+                width: "100vw",
+                fontSize: 22,
+                fontWeight: 600,
+                maxHeight: "90vh",
+                overflow: "auto",
+              }}
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-3xl">{selected.name || "Uten navn"}</span>
-                <button
-                  onClick={() => editMode ? setEditMode(false) : startEdit(selected)}
-                  className="ml-4 bg-blue-600 text-white px-8 py-2 text-2xl font-bold rounded"
-                >
-                  {editMode ? "Avslutt" : "Edit"}
-                </button>
-              </div>
-              {!editMode ? (
-                <>
-                  <div className="flex w-full justify-center gap-12 mb-1">
-                    <div className="flex flex-col items-center">
-                      <span className="text-green-600 font-bold text-xl mb-[-6px]">Fulle</span>
-                      <span className="text-3xl text-green-700">{selected.fullBarrels}</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-red-600 font-bold text-xl mb-[-6px]">Tomme</span>
-                      <span className="text-3xl text-red-600">{selected.emptyBarrels}</span>
-                    </div>
-                  </div>
-                  <div className="text-lg mt-2 mb-1">
-                    <span>Fuelhenger: <b>{selected.trailer ?? 0} liter</b></span>
-                  </div>
-                  <div className="text-lg mb-1">
-                    <span>Fueltank: <b>{selected.tank ?? 0} liter</b></span>
-                  </div>
-                  <div className="text-lg mb-2">
-                    <span>Utstyr: {selected.equipment || <span className="text-gray-400">Ingen info</span>}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex w-full justify-center gap-12 mb-1">
-                    {/* Fulle fat */}
-                    <div className="flex flex-col items-center">
-                      <span className="text-green-600 font-bold text-xl mb-[-6px]">Fulle</span>
-                      <div className="flex flex-row items-center mt-1">
-                        <input
-                          type="number"
-                          min={0}
-                          className="border text-2xl w-16 text-center mr-2"
-                          value={editValues.fullBarrels ?? selected.fullBarrels}
-                          onChange={e =>
-                            setEditValues({
-                              ...editValues,
-                              fullBarrels: e.target.value === "" ? 0 : Number(e.target.value)
-                            })
-                          }
-                        />
-                        <button
-                          className="bg-green-500 text-white text-3xl rounded-full w-12 h-12 flex items-center justify-center mr-2"
-                          onClick={() => setEditValues({
-                            ...editValues,
-                            fullBarrels: Number(editValues.fullBarrels ?? selected.fullBarrels) + 1,
-                            emptyBarrels: Math.max(0, Number(editValues.emptyBarrels ?? selected.emptyBarrels) - 1)
-                          })}
-                        >+</button>
-                        <button
-                          className="bg-red-500 text-white text-3xl rounded-full w-12 h-12 flex items-center justify-center"
-                          onClick={() => setEditValues({
-                            ...editValues,
-                            fullBarrels: Math.max(0, Number(editValues.fullBarrels ?? selected.fullBarrels) - 1),
-                            emptyBarrels: Number(editValues.emptyBarrels ?? selected.emptyBarrels) + 1
-                          })}
-                        >–</button>
-                      </div>
-                    </div>
-                    {/* Tomme fat */}
-                    <div className="flex flex-col items-center">
-                      <span className="text-red-600 font-bold text-xl mb-[-6px]">Tomme</span>
-                      <div className="flex flex-row items-center mt-1">
-                        <input
-                          type="number"
-                          min={0}
-                          className="border text-2xl w-16 text-center mr-2"
-                          value={editValues.emptyBarrels ?? selected.emptyBarrels}
-                          onChange={e =>
-                            setEditValues({
-                              ...editValues,
-                              emptyBarrels: e.target.value === "" ? 0 : Number(e.target.value)
-                            })
-                          }
-                        />
-                        <button
-                          className="bg-green-500 text-white text-3xl rounded-full w-12 h-12 flex items-center justify-center mr-2"
-                          onClick={() => setEditValues({
-                            ...editValues,
-                            emptyBarrels: Number(editValues.emptyBarrels ?? selected.emptyBarrels) + 1,
-                            fullBarrels: Math.max(0, Number(editValues.fullBarrels ?? selected.fullBarrels) - 1)
-                          })}
-                        >+</button>
-                        <button
-                          className="bg-red-500 text-white text-3xl rounded-full w-12 h-12 flex items-center justify-center"
-                          onClick={() => setEditValues({
-                            ...editValues,
-                            emptyBarrels: Math.max(0, Number(editValues.emptyBarrels ?? selected.emptyBarrels) - 1),
-                            fullBarrels: Number(editValues.fullBarrels ?? selected.fullBarrels) + 1
-                          })}
-                        >–</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-row gap-2 mb-2 mt-2 items-center">
-                    <span className="text-lg min-w-[105px]">Fuelhenger:</span>
-                    <input
-                      type="number"
-                      min={0}
-                      className="border text-2xl w-32 p-1 mr-2"
-                      value={editValues.trailer ?? selected.trailer ?? 0}
-                      onChange={e => setEditValues({ ...editValues, trailer: Number(e.target.value) })}
-                    />
-                    <span className="text-lg">liter</span>
-                  </div>
-                  <div className="flex flex-row gap-2 mb-2 items-center">
-                    <span className="text-lg min-w-[105px]">Fueltank:</span>
-                    <input
-                      type="number"
-                      min={0}
-                      className="border text-2xl w-32 p-1 mr-2"
-                      value={editValues.tank ?? selected.tank ?? 0}
-                      onChange={e => setEditValues({ ...editValues, tank: Number(e.target.value) })}
-                    />
-                    <span className="text-lg">liter</span>
-                  </div>
-                  <div className="flex flex-row gap-2 mb-3 items-center">
-                    <span className="text-lg min-w-[105px]">Utstyr:</span>
-                    <input
-                      className="border text-2xl w-56 p-1"
-                      value={editValues.equipment ?? selected.equipment ?? ""}
-                      onChange={e => setEditValues({ ...editValues, equipment: e.target.value })}
-                    />
-                  </div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-3xl font-extrabold">{selected.name || "Uten navn"}</span>
+                {editMode ? (
                   <button
-                    className="bg-green-600 text-white px-14 py-3 rounded text-2xl font-bold mt-2 mb-1"
-                    onClick={() => handleManualEdit(selected)}
+                    onClick={() => setEditMode(false)}
+                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-bold"
                   >
-                    Lagre
+                    Avslutt
                   </button>
-                </>
-              )}
-              <div className="flex justify-end items-end mt-auto mb-[-8px]">
-                <button
-                  onClick={() => deletePin(selected)}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded text-base font-bold mr-2 mb-2"
-                  style={{ minWidth: 65, fontSize: "1.2rem" }}
-                >
-                  Slett
-                </button>
+                ) : (
+                  <button
+                    onClick={() => startEdit(selected)}
+                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-bold"
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
-            </div>
-          </InfoWindowF>
-        )}
-      </GoogleMap>
-    </div>
-  );
-}
+
+              {/* Fulle og Tomme */}
+              {!editMode ? (
+                <div className="flex justify-around mb-3">
+                  <div className="flex flex-col items-center">
+                    <span className="text-green-700 font-bold text-lg">Fulle</span>
+                    <span className="text-3xl font-extrabold text-green-700">
+                      {selected.fullBarrels}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-red-700 font-bold text-lg">Tomme</span>
+                    <span className="text-3xl font-extrabold text-red-700">
+                      {selected.emptyBarrels}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-around mb-3 gap-1 items-center">
+                  {/* Fulle fat */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-green-700 font-bold text-lg">Fulle</span>
+                    <div className="flex flex-row items-center gap-1">
+                      <input
+                        type="number"
+                        className="w-16 text-2xl font-extrabold text-center text-black border"
+                        value={
+                          editValues.fullBarrels !== undefined
+                            ? editValues.fullBarrels
+                            : selected.fullBarrels
+                        }
+                        onChange={(e) =>
+                          setEditValues({
+                            ...editValues,
+                            fullBarrels: Number(e.target.value),
+                          })
+                        }
+                      />
+                      <button
+                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        onClick={() =>
+                          adjustBarrels(selected, "fullBarrels", 1)
+                        }
+                      >
+                        +
+                      </button>
+                      <button
+                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        onClick={() =>
+                          adjustBarrels(selected, "fullBarrels", -1)
+                        }
+                      >
+                        –
+                      </button>
+                    </div>
+                  </div>
+                  {/* Tomme fat */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-red-700 font-bold text-lg">Tomme</span>
+                    <div className="flex flex-row items-center gap-1">
+                      <input
+                        type="number"
+                        className="w-16 text-2xl font-extrabold text-center text-black border"
+                        value={
+                          editValues.emptyBarrels !== undefined
+                            ? editValues.emptyBarrels
+                            : selected.emptyBarrels
+                        }
+                        onChange={(e) =>
+                          setEditValues({
+                            ...editValues,
+                            emptyBarrels: Number(e.target.value),
+                          })
+                        }
+                      />
+                      <button
+                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        onClick={() =>
+                          adjustBarrels(selected, "emptyBarrels", 1)
+                        }
+                      >
+                        +
+                      </button>
+                      <button
+                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        onClick={() =>
+                          adjustBarrels(selected, "emptyBarrels", -1)
+                        }
+                      >
+                        –
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Fuel og utstyr */}
+              <div className="mb-1 flex flex-col gap-2 mt-2">
+                <div>
+                  <span>Fuelhenger: </span>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      className="border w-28 p-1 text-xl font-bold text-black"
+                      value={
+                        editValues.trailer !== undefined
+                          ? editValues.trailer
+                          : selected.trailer
+                      }
+                      onChange={(e) =>
+                        setEditValues({
+                          ...editValues,
+                          trailer: Number(e.target.value),
+                        })
+                      }
+                    />
+                  ) : (
+                    <span className="font-bold text-black">{selected.trailer || 0} liter</span>
+                  )}
+                </div>
+                <div>
+                  <span>Fueltank: </span>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      className="border w-28 p-1 text-xl font-bold text-black"
+                      value
