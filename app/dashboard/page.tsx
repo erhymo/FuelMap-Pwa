@@ -32,9 +32,16 @@ interface Pin {
   emptyBarrels: number;
   tank: number;
   trailer: number;
-  equipment: string;
+  equipment: string[]; // Endret til array
   images: string[];
   createdAt?: any;
+}
+
+// For å støtte eksisterende pins der equipment er string:
+function ensureArray(equipment: string | string[] | undefined): string[] {
+  if (!equipment) return [];
+  if (Array.isArray(equipment)) return equipment;
+  return equipment.split('\n').map(s => s.trim()).filter(Boolean);
 }
 
 const center = { lat: 60.472, lng: 8.4689 };
@@ -64,7 +71,7 @@ export default function Dashboard() {
   const [newType, setNewType] = useState<"base" | "fueldepot">("base");
   const [newName, setNewName] = useState("");
   const [newNote, setNewNote] = useState("");
-  const [editValues, setEditValues] = useState<Partial<Pin>>({});
+  const [editValues, setEditValues] = useState<Partial<Pin> & { newEquipment?: string }>({});
   const [editMode, setEditMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -72,10 +79,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "pins"), (snapshot) => {
-      const pinData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Pin, "id">),
-      }));
+      const pinData = snapshot.docs.map((doc) => {
+        const data = doc.data() as any;
+        return {
+          id: doc.id,
+          ...data,
+          equipment: ensureArray(data.equipment),
+        };
+      });
       setPins(pinData);
     });
     return () => unsub();
@@ -94,7 +105,7 @@ export default function Dashboard() {
         emptyBarrels: 0,
         tank: 0,
         trailer: 0,
-        equipment: "",
+        equipment: [],
         images: [],
         editing: true,
       });
@@ -121,7 +132,7 @@ export default function Dashboard() {
       emptyBarrels: 0,
       tank: 0,
       trailer: 0,
-      equipment: "",
+      equipment: [],
       images: [],
     });
     setSelected(null);
@@ -138,20 +149,19 @@ export default function Dashboard() {
     const updateData: any = {};
     for (const field in editValues) {
       let value = (editValues as any)[field];
-      if (field === "equipment") {
-      } else {
-        value = Number(value);
-        if (isNaN(value)) continue;
-      }
+      if (field === "equipment" || field === "newEquipment") continue;
+      if (field === "equipmentArr") continue;
+      value = Number(value);
+      if (isNaN(value)) continue;
       updateData[field] = value;
     }
-    if (Object.keys(updateData).length) {
-      await updateDoc(doc(db, "pins", pin.id), updateData);
-    }
+    // equipment-array
+    if (editValues.equipment) updateData.equipment = editValues.equipment;
+    await updateDoc(doc(db, "pins", pin.id), updateData);
     setEditValues({});
     setEditMode(false);
     const updatedPin = (await getDoc(doc(db, "pins", pin.id))).data();
-    if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">) });
+    if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">), equipment: ensureArray(updatedPin.equipment) });
   };
 
   // Pluss/minus fat (edit-modus)
@@ -191,11 +201,30 @@ export default function Dashboard() {
     }));
   };
 
+  // Utstyr: Legg til ny linje
+  const addEquipment = () => {
+    const trimmed = (editValues.newEquipment || "").trim();
+    if (!trimmed) return;
+    setEditValues((prev) => ({
+      ...prev,
+      equipment: [...(prev.equipment || []), trimmed],
+      newEquipment: "",
+    }));
+  };
+
+  // Utstyr: Slett én linje
+  const removeEquipment = (idx: number) => {
+    setEditValues((prev) => ({
+      ...prev,
+      equipment: (prev.equipment || []).filter((_: string, i: number) => i !== idx),
+    }));
+  };
+
   const flyTo = (pin: Pin) => {
     if (mapRef.current) {
       mapRef.current.panTo({ lat: Number(pin.lat), lng: Number(pin.lng) });
       mapRef.current.setZoom(13);
-      setSelected(pin);
+      setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
       setDropdownOpen(false);
       setEditMode(false);
       setShowDeleteConfirm(false);
@@ -209,7 +238,8 @@ export default function Dashboard() {
       emptyBarrels: pin.emptyBarrels,
       trailer: pin.trailer,
       tank: pin.tank,
-      equipment: pin.equipment,
+      equipment: ensureArray(pin.equipment),
+      newEquipment: "",
     });
   };
 
@@ -276,7 +306,7 @@ export default function Dashboard() {
             key={pin.id}
             position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
             onClick={() => {
-              setSelected(pin);
+              setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
               setEditMode(false);
               setShowDeleteConfirm(false);
             }}
@@ -348,7 +378,7 @@ export default function Dashboard() {
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
             options={{
-              maxWidth: 360,
+              maxWidth: 380,
               minWidth: 180,
               pixelOffset: new window.google.maps.Size(0, -10),
               disableAutoPan: false,
@@ -358,13 +388,13 @@ export default function Dashboard() {
               style={{
                 background: "#fff",
                 borderRadius: 14,
-                padding: 8,
-                fontSize: 14,
+                padding: 12,
+                fontSize: 15,
                 fontWeight: 700,
                 color: "#000",
-                width: "96vw",
-                maxWidth: 340,
-                minWidth: 160,
+                width: "97vw",
+                maxWidth: 370,
+                minWidth: 170,
                 wordBreak: "break-word",
                 boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
                 boxSizing: "border-box",
@@ -375,8 +405,8 @@ export default function Dashboard() {
                 justifyContent: "flex-start",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                <span style={{ fontSize: 18, fontWeight: 900 }}>{selected.name || "Uten navn"}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                <span style={{ fontSize: 21, fontWeight: 900 }}>{selected.name || "Uten navn"}</span>
                 {editMode ? (
                   <button
                     onClick={() => setEditMode(false)}
@@ -384,9 +414,9 @@ export default function Dashboard() {
                       background: "#2563eb",
                       color: "#fff",
                       borderRadius: 6,
-                      padding: "4px 10px",
+                      padding: "6px 13px",
                       fontWeight: 900,
-                      fontSize: 13,
+                      fontSize: 14,
                       border: "none"
                     }}
                   >
@@ -399,9 +429,9 @@ export default function Dashboard() {
                       background: "#2563eb",
                       color: "#fff",
                       borderRadius: 6,
-                      padding: "4px 10px",
+                      padding: "6px 13px",
                       fontWeight: 900,
-                      fontSize: 13,
+                      fontSize: 14,
                       border: "none"
                     }}
                   >
@@ -409,31 +439,48 @@ export default function Dashboard() {
                   </button>
                 )}
               </div>
-              <div style={{ color: "#059669", marginBottom: 1 }}>Fulle: <b>{selected.fullBarrels}</b></div>
-              <div style={{ color: "#dc2626", marginBottom: 6 }}>Tomme: <b>{selected.emptyBarrels}</b></div>
-              <div>Henger: <b>{selected.trailer || 0} L</b></div>
-              <div>Tank: <b>{selected.tank || 0} L</b></div>
-              <div>Utstyr: <b>{selected.equipment || "-"}</b></div>
-              {selected.note && <div>Notat: <b>{selected.note}</b></div>}
-              {/* Edit mode */}
+
+              {!editMode && (
+                <>
+                  <div style={{ color: "#059669", marginBottom: 1, fontSize: 17 }}>Fulle: <b>{selected.fullBarrels}</b></div>
+                  <div style={{ color: "#dc2626", marginBottom: 6, fontSize: 17 }}>Tomme: <b>{selected.emptyBarrels}</b></div>
+                  <div>Henger: <b>{selected.trailer || 0} L</b></div>
+                  <div>Tank: <b>{selected.tank || 0} L</b></div>
+                  <div>
+                    Utstyr:
+                    {(selected.equipment && selected.equipment.length > 0) ? (
+                      <ul style={{ marginTop: 2 }}>
+                        {selected.equipment.map((eq, i) => (
+                          <li key={i}>- {eq}</li>
+                        ))}
+                      </ul>
+                    ) : <span> -</span>}
+                  </div>
+                  {selected.note && <div>Notat: <b>{selected.note}</b></div>}
+                </>
+              )}
+
               {editMode && (
-                <div style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 5,
-                  marginTop: 7
-                }}>
-                  {/* Fulle fat */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ color: "#059669" }}>Fulle</span>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleManualEdit(selected); }}
+                  style={{ display: "flex", flexDirection: "column", gap: 11, marginTop: 7 }}
+                >
+                  <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 5, textAlign: "center" }}>
+                    {selected.name || "Uten navn"}
+                  </div>
+                  {/* Fulle/Tomme på én linje */}
+                  <div style={{ display: "flex", gap: 16, alignItems: "center", justifyContent: "center" }}>
+                    {/* Fulle */}
+                    <span style={{ color: "#059669", fontSize: 16, minWidth: 54 }}>Fulle</span>
                     <button
+                      type="button"
                       style={{
                         background: "#22c55e",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 26,
-                        height: 26,
-                        fontSize: 18,
+                        width: 32,
+                        height: 32,
+                        fontSize: 21,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -443,10 +490,10 @@ export default function Dashboard() {
                     <input
                       type="number"
                       style={{
-                        width: 32,
+                        width: 45,
                         textAlign: "center",
                         fontWeight: 800,
-                        fontSize: 14
+                        fontSize: 17
                       }}
                       value={
                         editValues.fullBarrels !== undefined
@@ -469,31 +516,31 @@ export default function Dashboard() {
                       min={0}
                     />
                     <button
+                      type="button"
                       style={{
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 26,
-                        height: 26,
-                        fontSize: 18,
+                        width: 32,
+                        height: 32,
+                        fontSize: 21,
                         border: "none",
                         fontWeight: 800
                       }}
                       onClick={() => adjustBarrels(selected, "fullBarrels", -1)}
                       tabIndex={-1}
                     >–</button>
-                  </div>
-                  {/* Tomme fat */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ color: "#dc2626" }}>Tomme</span>
+                    {/* Tomme */}
+                    <span style={{ color: "#dc2626", fontSize: 16, minWidth: 54, marginLeft: 16 }}>Tomme</span>
                     <button
+                      type="button"
                       style={{
                         background: "#22c55e",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 26,
-                        height: 26,
-                        fontSize: 18,
+                        width: 32,
+                        height: 32,
+                        fontSize: 21,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -503,10 +550,10 @@ export default function Dashboard() {
                     <input
                       type="number"
                       style={{
-                        width: 32,
+                        width: 45,
                         textAlign: "center",
                         fontWeight: 800,
-                        fontSize: 14
+                        fontSize: 17
                       }}
                       value={
                         editValues.emptyBarrels !== undefined
@@ -529,13 +576,14 @@ export default function Dashboard() {
                       min={0}
                     />
                     <button
+                      type="button"
                       style={{
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 26,
-                        height: 26,
-                        fontSize: 18,
+                        width: 32,
+                        height: 32,
+                        fontSize: 21,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -543,12 +591,12 @@ export default function Dashboard() {
                       tabIndex={-1}
                     >–</button>
                   </div>
-                  {/* Fuelhenger */}
-                  <div>
-                    <span>Henger: </span>
+                  {/* Henger */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <span>Henger (liter):</span>
                     <input
                       type="number"
-                      style={{ width: 48, fontWeight: 700, fontSize: 13 }}
+                      style={{ width: 80, fontWeight: 700, fontSize: 15 }}
                       value={editValues.trailer !== undefined ? (editValues.trailer === 0 ? "" : editValues.trailer) : ""}
                       placeholder="0"
                       onFocus={(e) => {
@@ -565,12 +613,12 @@ export default function Dashboard() {
                       }
                     />
                   </div>
-                  {/* Fueltank */}
-                  <div>
-                    <span>Tank: </span>
+                  {/* Tank */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <span>Tank (liter):</span>
                     <input
                       type="number"
-                      style={{ width: 48, fontWeight: 700, fontSize: 13 }}
+                      style={{ width: 80, fontWeight: 700, fontSize: 15 }}
                       value={editValues.tank !== undefined ? (editValues.tank === 0 ? "" : editValues.tank) : ""}
                       placeholder="0"
                       onFocus={(e) => {
@@ -589,48 +637,93 @@ export default function Dashboard() {
                   </div>
                   {/* Utstyr */}
                   <div>
-                    <span>Utstyr: </span>
-                    <input
-                      type="text"
-                      style={{ width: 80, fontWeight: 700, fontSize: 13 }}
-                      value={editValues.equipment !== undefined ? editValues.equipment : ""}
-                      onChange={(e) =>
-                        setEditValues({
-                          ...editValues,
-                          equipment: e.target.value,
-                        })
-                      }
-                    />
+                    <span>Utstyr:</span>
+                    <div style={{ display: "flex", marginTop: 2, gap: 5 }}>
+                      <input
+                        type="text"
+                        style={{ width: 120, fontWeight: 700, fontSize: 14 }}
+                        value={editValues.newEquipment || ""}
+                        onChange={(e) =>
+                          setEditValues({
+                            ...editValues,
+                            newEquipment: e.target.value,
+                          })
+                        }
+                        placeholder="Legg til utstyr"
+                      />
+                      <button
+                        type="button"
+                        style={{
+                          background: "#22c55e",
+                          color: "#fff",
+                          borderRadius: 6,
+                          padding: "3px 11px",
+                          fontWeight: 800,
+                          fontSize: 14,
+                          border: "none"
+                        }}
+                        onClick={addEquipment}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                      {(editValues.equipment || []).map((eq, idx) => (
+                        <li key={idx} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                          <span>- {eq}</span>
+                          <button
+                            type="button"
+                            style={{
+                              background: "#ef4444",
+                              color: "#fff",
+                              borderRadius: "50%",
+                              width: 22,
+                              height: 22,
+                              fontSize: 14,
+                              border: "none",
+                              fontWeight: 900,
+                              marginLeft: 2,
+                              marginTop: -2
+                            }}
+                            onClick={() => removeEquipment(idx)}
+                            title="Slett"
+                          >
+                            x
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                   {/* Lagre/slett */}
-                  <div style={{ display: "flex", alignItems: "center", marginTop: 5 }}>
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 7 }}>
                     <button
+                      type="submit"
                       style={{
                         background: "#2563eb",
                         color: "#fff",
                         borderRadius: 7,
-                        padding: "5px 14px",
+                        padding: "8px 0",
                         fontWeight: 900,
-                        fontSize: 13,
+                        fontSize: 16,
                         border: "none",
                         flex: 1,
-                        marginRight: 8
+                        marginRight: 10
                       }}
-                      onClick={() => handleManualEdit(selected)}
                     >
                       Lagre
                     </button>
                     <button
+                      type="button"
                       style={{
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: 7,
-                        padding: "4px 8px",
+                        padding: "4px 10px",
                         fontWeight: 900,
-                        fontSize: 10,
+                        fontSize: 11,
                         border: "none",
-                        minWidth: 18,
-                        maxWidth: 36,
+                        minWidth: 26,
+                        maxWidth: 38,
                         marginLeft: 0
                       }}
                       onClick={() => setShowDeleteConfirm(true)}
@@ -667,6 +760,7 @@ export default function Dashboard() {
                         </span>
                         <div style={{ display: "flex", gap: 12 }}>
                           <button
+                            type="button"
                             style={{
                               background: "#ef4444",
                               color: "#fff",
@@ -681,6 +775,7 @@ export default function Dashboard() {
                             Ja, slett
                           </button>
                           <button
+                            type="button"
                             style={{
                               background: "#f3f4f6",
                               color: "#222",
@@ -698,7 +793,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                </div>
+                </form>
               )}
             </div>
           </InfoWindowF>
