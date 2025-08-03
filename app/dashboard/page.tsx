@@ -209,21 +209,21 @@ export default function Dashboard() {
     });
   };
 
-  if (!isLoaded) return <p>Laster kart...</p>;
+  if (!isLoaded) return <p className="text-black font-bold text-xl">Laster kart...</p>;
 
   return (
     <div className="relative w-full h-screen">
       {/* --- DEPOTDROPDOWN --- */}
       <div className="absolute z-20 left-4 top-4">
         <button
-          className="bg-white rounded-full shadow p-3 mb-2 text-3xl font-bold"
+          className="bg-white rounded-full shadow p-3 mb-2 text-3xl font-extrabold text-black"
           onClick={() => setDropdownOpen(!dropdownOpen)}
         >
           ☰
         </button>
         {dropdownOpen && (
           <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-64 overflow-y-auto mt-2">
-            <div className="mb-2 text-2xl font-bold text-black">Alle depoter:</div>
+            <div className="mb-2 text-2xl font-extrabold text-black">Alle depoter:</div>
             {pins
               .filter((p) => p.type === "fueldepot")
               .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
@@ -233,16 +233,16 @@ export default function Dashboard() {
                   className="flex items-center gap-2 px-2 py-2 rounded hover:bg-green-100 cursor-pointer"
                   onClick={() => flyTo(pin)}
                 >
-                  <span className="font-semibold text-lg text-black">{pin.name}</span>
+                  <span className="font-bold text-lg text-black">{pin.name}</span>
                   <span className="ml-auto flex flex-col items-end">
                     <span>
                       <span className="mr-2 flex flex-col items-center">
                         <span className="text-xs text-green-600 font-bold">F</span>
-                        <span className="underline text-green-600 font-bold">{pin.fullBarrels}</span>
+                        <span className="underline text-green-600 font-extrabold">{pin.fullBarrels}</span>
                       </span>
                       <span className="flex flex-col items-center">
                         <span className="text-xs text-red-600 font-bold">T</span>
-                        <span className="underline text-red-600 font-bold">{pin.emptyBarrels}</span>
+                        <span className="underline text-red-600 font-extrabold">{pin.emptyBarrels}</span>
                       </span>
                     </span>
                   </span>
@@ -252,7 +252,7 @@ export default function Dashboard() {
         )}
         {/* Nytt depot */}
         <button
-          className="bg-green-500 text-white rounded-full shadow p-4 text-4xl mt-3"
+          className="bg-green-500 text-white rounded-full shadow p-4 text-4xl mt-3 font-extrabold"
           onClick={() => setAddMode(true)}
           title="Legg til nytt depot"
         >
@@ -291,15 +291,15 @@ export default function Dashboard() {
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
           >
-            <div className="p-3 text-2xl font-semibold text-black">
-              <div className="mb-2 font-bold">Nytt punkt</div>
+            <div className="p-3 text-2xl font-extrabold text-black">
+              <div className="mb-2 font-extrabold">Nytt punkt</div>
               <div>
-                <label>
+                <label className="text-black font-extrabold">
                   Type:{" "}
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as "base" | "fueldepot")}
-                    className="text-xl p-2 border text-black"
+                    className="text-xl p-2 border text-black font-extrabold"
                   >
                     <option value="base">Base</option>
                     <option value="fueldepot">Fueldepot</option>
@@ -307,24 +307,28 @@ export default function Dashboard() {
                 </label>
               </div>
               <div className="mt-2">
-                Navn:{" "}
-                <input
-                  className="border p-2 text-xl text-black"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
+                <label className="text-black font-extrabold">
+                  Navn:{" "}
+                  <input
+                    className="border p-2 text-xl text-black font-extrabold"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                  />
+                </label>
               </div>
               <div className="mt-2">
-                Notat:{" "}
-                <input
-                  className="border p-2 text-xl text-black"
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                />
+                <label className="text-black font-extrabold">
+                  Notat:{" "}
+                  <input
+                    className="border p-2 text-xl text-black font-extrabold"
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                  />
+                </label>
               </div>
               <button
                 onClick={saveNewPin}
-                className="mt-4 bg-green-600 text-white px-6 py-2 rounded text-2xl"
+                className="mt-4 bg-green-600 text-white px-6 py-2 rounded text-2xl font-extrabold"
               >
                 Lagre
               </button>
@@ -339,7 +343,7 @@ export default function Dashboard() {
             onCloseClick={() => setSelected(null)}
           >
             <div
-              className="p-5 rounded-xl text-black"
+              className="p-5 rounded-xl"
               style={{
                 background: "#fff",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
@@ -347,24 +351,25 @@ export default function Dashboard() {
                 minWidth: 290,
                 width: "100vw",
                 fontSize: 22,
-                fontWeight: 600,
+                fontWeight: 800,
                 maxHeight: "90vh",
                 overflow: "auto",
+                color: "#000", // ekstra sikkerhet for sort tekst
               }}
             >
               <div className="flex justify-between items-center mb-3">
-                <span className="text-3xl font-extrabold">{selected.name || "Uten navn"}</span>
+                <span className="text-3xl font-extrabold text-black">{selected.name || "Uten navn"}</span>
                 {editMode ? (
                   <button
                     onClick={() => setEditMode(false)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-bold"
+                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-extrabold"
                   >
                     Avslutt
                   </button>
                 ) : (
                   <button
                     onClick={() => startEdit(selected)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-bold"
+                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-extrabold"
                   >
                     Edit
                   </button>
@@ -409,7 +414,7 @@ export default function Dashboard() {
                         }
                       />
                       <button
-                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
                         onClick={() =>
                           adjustBarrels(selected, "fullBarrels", 1)
                         }
@@ -417,7 +422,7 @@ export default function Dashboard() {
                         +
                       </button>
                       <button
-                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
                         onClick={() =>
                           adjustBarrels(selected, "fullBarrels", -1)
                         }
@@ -446,7 +451,7 @@ export default function Dashboard() {
                         }
                       />
                       <button
-                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
                         onClick={() =>
                           adjustBarrels(selected, "emptyBarrels", 1)
                         }
@@ -454,7 +459,7 @@ export default function Dashboard() {
                         +
                       </button>
                       <button
-                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1"
+                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
                         onClick={() =>
                           adjustBarrels(selected, "emptyBarrels", -1)
                         }
@@ -469,11 +474,11 @@ export default function Dashboard() {
               {/* Fuel og utstyr */}
               <div className="mb-1 flex flex-col gap-2 mt-2">
                 <div>
-                  <span>Fuelhenger: </span>
+                  <span className="font-bold text-black">Fuelhenger: </span>
                   {editMode ? (
                     <input
                       type="number"
-                      className="border w-28 p-1 text-xl font-bold text-black"
+                      className="border w-28 p-1 text-xl font-extrabold text-black"
                       value={
                         editValues.trailer !== undefined
                           ? editValues.trailer
@@ -487,13 +492,82 @@ export default function Dashboard() {
                       }
                     />
                   ) : (
-                    <span className="font-bold text-black">{selected.trailer || 0} liter</span>
+                    <span className="font-extrabold text-black">{selected.trailer || 0} liter</span>
                   )}
                 </div>
                 <div>
-                  <span>Fueltank: </span>
+                  <span className="font-bold text-black">Fueltank: </span>
                   {editMode ? (
                     <input
                       type="number"
-                      className="border w-28 p-1 text-xl font-bold text-black"
-                      value
+                      className="border w-28 p-1 text-xl font-extrabold text-black"
+                      value={
+                        editValues.tank !== undefined
+                          ? editValues.tank
+                          : selected.tank
+                      }
+                      onChange={(e) =>
+                        setEditValues({
+                          ...editValues,
+                          tank: Number(e.target.value),
+                        })
+                      }
+                    />
+                  ) : (
+                    <span className="font-extrabold text-black">{selected.tank || 0} liter</span>
+                  )}
+                </div>
+                <div>
+                  <span className="font-bold text-black">Utstyr: </span>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="border w-44 p-1 text-xl font-extrabold text-black"
+                      value={
+                        editValues.equipment !== undefined
+                          ? editValues.equipment
+                          : selected.equipment
+                      }
+                      onChange={(e) =>
+                        setEditValues({
+                          ...editValues,
+                          equipment: e.target.value,
+                        })
+                      }
+                    />
+                  ) : (
+                    <span className="font-extrabold text-black">{selected.equipment || "-"}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Lagre / Slett */}
+              {editMode && (
+                <div className="flex items-center mt-4">
+                  <button
+                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-extrabold flex-1"
+                    onClick={() => handleManualEdit(selected)}
+                  >
+                    Lagre
+                  </button>
+                  <button
+                    className="bg-red-600 text-white px-4 py-2 rounded text-lg font-extrabold ml-3"
+                    style={{
+                      flex: "0 0 90px",
+                      minWidth: 50,
+                      maxWidth: 110,
+                      fontSize: "1.1rem",
+                    }}
+                    onClick={() => deletePin(selected)}
+                  >
+                    Slett
+                  </button>
+                </div>
+              )}
+            </div>
+          </InfoWindowF>
+        )}
+      </GoogleMap>
+    </div>
+  );
+}
