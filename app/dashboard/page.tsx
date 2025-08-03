@@ -37,12 +37,10 @@ interface Pin {
   createdAt?: any;
 }
 
-// Midtpunkt for Norge
 const center = { lat: 60.472, lng: 8.4689 };
 const mapContainerStyle = { width: "100%", height: "100vh" };
 
 export default function Dashboard() {
-  // --- Auth ---
   const router = useRouter();
   useEffect(() => {
     const session = localStorage.getItem("fuelmap_session");
@@ -69,9 +67,9 @@ export default function Dashboard() {
   const [editValues, setEditValues] = useState<Partial<Pin>>({});
   const [editMode, setEditMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // --- Fetch pins fra Firestore ---
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "pins"), (snapshot) => {
       const pinData = snapshot.docs.map((doc) => ({
@@ -83,7 +81,6 @@ export default function Dashboard() {
     return () => unsub();
   }, []);
 
-  // --- Map click ---
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
     if (e.latLng && addMode) {
       setSelected({
@@ -110,7 +107,6 @@ export default function Dashboard() {
     }
   };
 
-  // --- Lagre nytt punkt ---
   const saveNewPin = async () => {
     await addDoc(collection(db, "pins"), {
       lat: Number(selected?.lat),
@@ -129,19 +125,17 @@ export default function Dashboard() {
     setSelected(null);
   };
 
-  // --- Slett punkt ---
   const deletePin = async (pin: Pin) => {
     await deleteDoc(doc(db, "pins", pin.id));
+    setShowDeleteConfirm(false);
     setSelected(null);
   };
 
-  // --- Oppdater felter manuelt (kontrollerte inputs og tallkonvertering) ---
   const handleManualEdit = async (pin: Pin) => {
     const updateData: any = {};
     for (const field in editValues) {
       let value = (editValues as any)[field];
       if (field === "equipment") {
-        // Utstyr kan være tekst
       } else {
         value = Number(value);
         if (isNaN(value)) continue;
@@ -157,7 +151,6 @@ export default function Dashboard() {
     if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">) });
   };
 
-  // --- Pluss/minus fat --- (nå 100% synk med input og kan ikke gå under 0)
   const adjustBarrels = async (
     pin: Pin,
     field: "fullBarrels" | "emptyBarrels",
@@ -200,7 +193,6 @@ export default function Dashboard() {
     }));
   };
 
-  // --- Zoom til depot ---
   const flyTo = (pin: Pin) => {
     if (mapRef.current) {
       mapRef.current.panTo({ lat: Number(pin.lat), lng: Number(pin.lng) });
@@ -210,7 +202,6 @@ export default function Dashboard() {
     }
   };
 
-  // --- Start edit ---
   const startEdit = (pin: Pin) => {
     setEditMode(true);
     setEditValues({
@@ -226,7 +217,7 @@ export default function Dashboard() {
 
   return (
     <div className="relative w-full h-screen">
-      {/* --- DEPOTDROPDOWN --- */}
+      {/* DEPOTDROPDOWN */}
       <div className="absolute z-20 left-4 top-4">
         <button
           className="bg-white rounded-full shadow p-3 mb-2 text-3xl font-extrabold text-black"
@@ -270,7 +261,7 @@ export default function Dashboard() {
           +
         </button>
       </div>
-      {/* --- KART --- */}
+      {/* KART */}
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
@@ -296,7 +287,7 @@ export default function Dashboard() {
             }}
           />
         ))}
-        {/* --- Nytt punkt --- */}
+        {/* Nytt punkt */}
         {selected?.editing && (
           <InfoWindowF
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
@@ -347,161 +338,234 @@ export default function Dashboard() {
           </InfoWindowF>
         )}
 
-        {/* --- INFOBOBLE FOR DEPOT --- */}
+        {/* INFOBOBLE FOR DEPOT */}
         {selected && !selected.editing && (
           <InfoWindowF
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
             options={{
-              pixelOffset: new window.google.maps.Size(0, -25),
-              maxWidth: 340,
-              minWidth: 260,
+              maxWidth: 360,
+              minWidth: 180,
+              pixelOffset: new window.google.maps.Size(0, -10),
               disableAutoPan: false,
             }}
           >
             <div
-              className="p-3 rounded-xl"
               style={{
                 background: "#fff",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-                width: "94vw",
-                maxWidth: 340,
-                minWidth: 260,
-                fontSize: 19,
-                fontWeight: 800,
+                borderRadius: 14,
+                padding: 8,
+                fontSize: 14,
+                fontWeight: 700,
                 color: "#000",
-                overflow: "visible",
-                maxHeight: "none",
+                width: "96vw",
+                maxWidth: 340,
+                minWidth: 160,
+                wordBreak: "break-word",
+                boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
+                boxSizing: "border-box",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
               }}
             >
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-2xl font-extrabold text-black">{selected.name || "Uten navn"}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                <span style={{ fontSize: 18, fontWeight: 900 }}>{selected.name || "Uten navn"}</span>
                 {editMode ? (
                   <button
                     onClick={() => setEditMode(false)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded text-lg font-extrabold"
+                    style={{
+                      background: "#2563eb",
+                      color: "#fff",
+                      borderRadius: 6,
+                      padding: "4px 10px",
+                      fontWeight: 900,
+                      fontSize: 13,
+                      border: "none"
+                    }}
                   >
                     Avslutt
                   </button>
                 ) : (
                   <button
                     onClick={() => startEdit(selected)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded text-lg font-extrabold"
+                    style={{
+                      background: "#2563eb",
+                      color: "#fff",
+                      borderRadius: 6,
+                      padding: "4px 10px",
+                      fontWeight: 900,
+                      fontSize: 13,
+                      border: "none"
+                    }}
                   >
                     Edit
                   </button>
                 )}
               </div>
               {/* Fulle og Tomme */}
-              {!editMode ? (
-                <div className="flex justify-around mb-3">
-                  <div className="flex flex-row items-center gap-3">
-                    <span className="text-green-700 font-bold text-base">Fulle:</span>
-                    <span className="text-2xl font-extrabold text-green-700">
-                      {selected.fullBarrels}
-                    </span>
-                  </div>
-                  <div className="flex flex-row items-center gap-3">
-                    <span className="text-red-700 font-bold text-base">Tomme:</span>
-                    <span className="text-2xl font-extrabold text-red-700">
-                      {selected.emptyBarrels}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-around mb-3 gap-1 items-center">
-                  {/* Fulle fat */}
-                  <div className="flex flex-col items-center">
-                    <span className="text-green-700 font-bold text-base">Fulle</span>
-                    <div className="flex flex-row items-center gap-1">
-                      <button
-                        className="bg-green-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
-                        onClick={() =>
-                          adjustBarrels(selected, "fullBarrels", 1)
-                        }
-                      >
-                        +
-                      </button>
-                      <input
-                        type="number"
-                        className="w-10 text-xl font-extrabold text-center text-black border"
-                        value={
-                          editValues.fullBarrels !== undefined
-                            ? editValues.fullBarrels
-                            : selected.fullBarrels
-                        }
-                        onChange={(e) =>
-                          setEditValues({
-                            ...editValues,
-                            fullBarrels: Number(e.target.value),
-                          })
-                        }
-                        min={0}
-                      />
-                      <button
-                        className="bg-red-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
-                        onClick={() =>
-                          adjustBarrels(selected, "fullBarrels", -1)
-                        }
-                      >
-                        –
-                      </button>
-                    </div>
-                  </div>
-                  {/* Tomme fat */}
-                  <div className="flex flex-col items-center">
-                    <span className="text-red-700 font-bold text-base">Tomme</span>
-                    <div className="flex flex-row items-center gap-1">
-                      <button
-                        className="bg-green-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
-                        onClick={() =>
-                          adjustBarrels(selected, "emptyBarrels", 1)
-                        }
-                      >
-                        +
-                      </button>
-                      <input
-                        type="number"
-                        className="w-10 text-xl font-extrabold text-center text-black border"
-                        value={
-                          editValues.emptyBarrels !== undefined
-                            ? editValues.emptyBarrels
-                            : selected.emptyBarrels
-                        }
-                        onChange={(e) =>
-                          setEditValues({
-                            ...editValues,
-                            emptyBarrels: Number(e.target.value),
-                          })
-                        }
-                        min={0}
-                      />
-                      <button
-                        className="bg-red-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
-                        onClick={() =>
-                          adjustBarrels(selected, "emptyBarrels", -1)
-                        }
-                      >
-                        –
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                alignItems: "center",
+                marginBottom: 3,
+                fontSize: 14
+              }}>
+                <div style={{ color: "#059669" }}>Fulle: <b>{selected.fullBarrels}</b></div>
+                <div style={{ color: "#dc2626" }}>Tomme: <b>{selected.emptyBarrels}</b></div>
+              </div>
               {/* Fuel og utstyr */}
-              <div className="mb-1 flex flex-col gap-1 mt-2">
-                <div>
-                  <span className="font-bold text-black">Fuelhenger: </span>
-                  {editMode ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 14 }}>
+                <div>Henger: <b>{selected.trailer || 0} L</b></div>
+                <div>Tank: <b>{selected.tank || 0} L</b></div>
+                <div>Utstyr: <b>{selected.equipment || "-"}</b></div>
+                {selected.note && <div>Notat: <b>{selected.note}</b></div>}
+              </div>
+              {/* Edit mode */}
+              {editMode && (
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                  marginTop: 7
+                }}>
+                  {/* Fulle fat */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ color: "#059669" }}>Fulle</span>
+                    <button
+                      style={{
+                        background: "#22c55e",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        width: 26,
+                        height: 26,
+                        fontSize: 18,
+                        border: "none",
+                        fontWeight: 800
+                      }}
+                      onClick={() => adjustBarrels(selected, "fullBarrels", 1)}
+                      tabIndex={-1}
+                    >+</button>
                     <input
                       type="number"
-                      className="border w-24 p-1 text-base font-extrabold text-black"
+                      style={{
+                        width: 32,
+                        textAlign: "center",
+                        fontWeight: 800,
+                        fontSize: 14
+                      }}
                       value={
-                        editValues.trailer !== undefined
-                          ? editValues.trailer
-                          : selected.trailer
+                        editValues.fullBarrels !== undefined
+                          ? (editValues.fullBarrels === 0 ? "" : editValues.fullBarrels)
+                          : ""
                       }
+                      placeholder="0"
+                      onFocus={(e) => {
+                        if (e.target.value === "0") {
+                          e.target.value = "";
+                          setEditValues({ ...editValues, fullBarrels: undefined });
+                        }
+                      }}
+                      onChange={(e) =>
+                        setEditValues({
+                          ...editValues,
+                          fullBarrels: Number(e.target.value),
+                        })
+                      }
+                      min={0}
+                    />
+                    <button
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        width: 26,
+                        height: 26,
+                        fontSize: 18,
+                        border: "none",
+                        fontWeight: 800
+                      }}
+                      onClick={() => adjustBarrels(selected, "fullBarrels", -1)}
+                      tabIndex={-1}
+                    >–</button>
+                  </div>
+                  {/* Tomme fat */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ color: "#dc2626" }}>Tomme</span>
+                    <button
+                      style={{
+                        background: "#22c55e",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        width: 26,
+                        height: 26,
+                        fontSize: 18,
+                        border: "none",
+                        fontWeight: 800
+                      }}
+                      onClick={() => adjustBarrels(selected, "emptyBarrels", 1)}
+                      tabIndex={-1}
+                    >+</button>
+                    <input
+                      type="number"
+                      style={{
+                        width: 32,
+                        textAlign: "center",
+                        fontWeight: 800,
+                        fontSize: 14
+                      }}
+                      value={
+                        editValues.emptyBarrels !== undefined
+                          ? (editValues.emptyBarrels === 0 ? "" : editValues.emptyBarrels)
+                          : ""
+                      }
+                      placeholder="0"
+                      onFocus={(e) => {
+                        if (e.target.value === "0") {
+                          e.target.value = "";
+                          setEditValues({ ...editValues, emptyBarrels: undefined });
+                        }
+                      }}
+                      onChange={(e) =>
+                        setEditValues({
+                          ...editValues,
+                          emptyBarrels: Number(e.target.value),
+                        })
+                      }
+                      min={0}
+                    />
+                    <button
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        width: 26,
+                        height: 26,
+                        fontSize: 18,
+                        border: "none",
+                        fontWeight: 800
+                      }}
+                      onClick={() => adjustBarrels(selected, "emptyBarrels", -1)}
+                      tabIndex={-1}
+                    >–</button>
+                  </div>
+                  {/* Fuelhenger */}
+                  <div>
+                    <span>Henger: </span>
+                    <input
+                      type="number"
+                      style={{ width: 48, fontWeight: 700, fontSize: 13 }}
+                      value={editValues.trailer !== undefined ? (editValues.trailer === 0 ? "" : editValues.trailer) : ""}
+                      placeholder="0"
+                      onFocus={(e) => {
+                        if (e.target.value === "0") {
+                          e.target.value = "";
+                          setEditValues({ ...editValues, trailer: undefined });
+                        }
+                      }}
                       onChange={(e) =>
                         setEditValues({
                           ...editValues,
@@ -509,21 +573,21 @@ export default function Dashboard() {
                         })
                       }
                     />
-                  ) : (
-                    <span className="font-extrabold text-black">{selected.trailer || 0} liter</span>
-                  )}
-                </div>
-                <div>
-                  <span className="font-bold text-black">Fueltank: </span>
-                  {editMode ? (
+                  </div>
+                  {/* Fueltank */}
+                  <div>
+                    <span>Tank: </span>
                     <input
                       type="number"
-                      className="border w-24 p-1 text-base font-extrabold text-black"
-                      value={
-                        editValues.tank !== undefined
-                          ? editValues.tank
-                          : selected.tank
-                      }
+                      style={{ width: 48, fontWeight: 700, fontSize: 13 }}
+                      value={editValues.tank !== undefined ? (editValues.tank === 0 ? "" : editValues.tank) : ""}
+                      placeholder="0"
+                      onFocus={(e) => {
+                        if (e.target.value === "0") {
+                          e.target.value = "";
+                          setEditValues({ ...editValues, tank: undefined });
+                        }
+                      }}
                       onChange={(e) =>
                         setEditValues({
                           ...editValues,
@@ -531,21 +595,14 @@ export default function Dashboard() {
                         })
                       }
                     />
-                  ) : (
-                    <span className="font-extrabold text-black">{selected.tank || 0} liter</span>
-                  )}
-                </div>
-                <div>
-                  <span className="font-bold text-black">Utstyr: </span>
-                  {editMode ? (
+                  </div>
+                  {/* Utstyr */}
+                  <div>
+                    <span>Utstyr: </span>
                     <input
                       type="text"
-                      className="border w-40 p-1 text-base font-extrabold text-black"
-                      value={
-                        editValues.equipment !== undefined
-                          ? editValues.equipment
-                          : selected.equipment
-                      }
+                      style={{ width: 80, fontWeight: 700, fontSize: 13 }}
+                      value={editValues.equipment !== undefined ? editValues.equipment : ""}
                       onChange={(e) =>
                         setEditValues({
                           ...editValues,
@@ -553,33 +610,103 @@ export default function Dashboard() {
                         })
                       }
                     />
-                  ) : (
-                    <span className="font-extrabold text-black">{selected.equipment || "-"}</span>
+                  </div>
+                  {/* Lagre/slett */}
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 5 }}>
+                    <button
+                      style={{
+                        background: "#2563eb",
+                        color: "#fff",
+                        borderRadius: 7,
+                        padding: "5px 14px",
+                        fontWeight: 900,
+                        fontSize: 13,
+                        border: "none",
+                        flex: 1,
+                        marginRight: 8
+                      }}
+                      onClick={() => handleManualEdit(selected)}
+                    >
+                      Lagre
+                    </button>
+                    <button
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        borderRadius: 7,
+                        padding: "4px 8px",
+                        fontWeight: 900,
+                        fontSize: 10,
+                        border: "none",
+                        minWidth: 18,
+                        maxWidth: 36,
+                        marginLeft: 0
+                      }}
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      Slett
+                    </button>
+                  </div>
+                  {/* Slettebekreftelse-popup */}
+                  {showDeleteConfirm && (
+                    <div style={{
+                      position: "fixed",
+                      top: 0, left: 0,
+                      width: "100vw",
+                      height: "100vh",
+                      background: "rgba(0,0,0,0.16)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 9999
+                    }}>
+                      <div style={{
+                        background: "#fff",
+                        borderRadius: 12,
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.19)",
+                        padding: 18,
+                        minWidth: 230,
+                        maxWidth: 340,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center"
+                      }}>
+                        <span style={{ fontWeight: 700, fontSize: 16, marginBottom: 18, color: "#dc2626" }}>
+                          Er du sikker på at du vil slette depot?
+                        </span>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <button
+                            style={{
+                              background: "#ef4444",
+                              color: "#fff",
+                              borderRadius: 7,
+                              padding: "7px 16px",
+                              fontWeight: 900,
+                              fontSize: 13,
+                              border: "none"
+                            }}
+                            onClick={() => deletePin(selected)}
+                          >
+                            Ja, slett
+                          </button>
+                          <button
+                            style={{
+                              background: "#f3f4f6",
+                              color: "#222",
+                              borderRadius: 7,
+                              padding: "7px 16px",
+                              fontWeight: 900,
+                              fontSize: 13,
+                              border: "none"
+                            }}
+                            onClick={() => setShowDeleteConfirm(false)}
+                          >
+                            Avbryt
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </div>
-              </div>
-
-              {/* Lagre / Slett */}
-              {editMode && (
-                <div className="flex items-center mt-4">
-                  <button
-                    className="bg-blue-600 text-white px-4 py-2 rounded text-lg font-extrabold flex-1"
-                    onClick={() => handleManualEdit(selected)}
-                  >
-                    Lagre
-                  </button>
-                  <button
-                    className="bg-red-600 text-white px-3 py-2 rounded text-base font-extrabold ml-3"
-                    style={{
-                      flex: "0 0 70px",
-                      minWidth: 40,
-                      maxWidth: 80,
-                      fontSize: "1.05rem",
-                    }}
-                    onClick={() => deletePin(selected)}
-                  >
-                    Slett
-                  </button>
                 </div>
               )}
             </div>
