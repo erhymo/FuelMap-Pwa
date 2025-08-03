@@ -157,7 +157,7 @@ export default function Dashboard() {
     if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">) });
   };
 
-  // --- Pluss/minus fat ---
+  // --- Pluss/minus fat --- (nå 100% synk med input og kan ikke gå under 0)
   const adjustBarrels = async (
     pin: Pin,
     field: "fullBarrels" | "emptyBarrels",
@@ -167,13 +167,21 @@ export default function Dashboard() {
     let newEmpty = pin.emptyBarrels;
 
     if (field === "fullBarrels") {
-      newFull += delta;
-      if (delta > 0 && newEmpty > 0) newEmpty -= 1;
-      if (delta < 0) newEmpty += 1;
+      if (delta > 0 && pin.emptyBarrels > 0) {
+        newFull += 1;
+        newEmpty -= 1;
+      } else if (delta < 0 && pin.fullBarrels > 0) {
+        newFull -= 1;
+        newEmpty += 1;
+      }
     } else {
-      newEmpty += delta;
-      if (delta > 0 && newFull > 0) newFull -= 1;
-      if (delta < 0) newFull += 1;
+      if (delta > 0 && pin.fullBarrels > 0) {
+        newEmpty += 1;
+        newFull -= 1;
+      } else if (delta < 0 && pin.emptyBarrels > 0) {
+        newEmpty -= 1;
+        newFull += 1;
+      }
     }
 
     newFull = Math.max(0, newFull);
@@ -185,6 +193,11 @@ export default function Dashboard() {
     });
 
     setSelected({ ...pin, fullBarrels: newFull, emptyBarrels: newEmpty });
+    setEditValues((v) => ({
+      ...v,
+      fullBarrels: newFull,
+      emptyBarrels: newEmpty,
+    }));
   };
 
   // --- Zoom til depot ---
@@ -222,7 +235,7 @@ export default function Dashboard() {
           ☰
         </button>
         {dropdownOpen && (
-          <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-64 overflow-y-auto mt-2">
+          <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-72 overflow-y-auto mt-2">
             <div className="mb-2 text-2xl font-extrabold text-black">Alle depoter:</div>
             {pins
               .filter((p) => p.type === "fueldepot")
@@ -234,16 +247,14 @@ export default function Dashboard() {
                   onClick={() => flyTo(pin)}
                 >
                   <span className="font-bold text-lg text-black">{pin.name}</span>
-                  <span className="ml-auto flex flex-col items-end">
-                    <span>
-                      <span className="mr-2 flex flex-col items-center">
-                        <span className="text-xs text-green-600 font-bold">F</span>
-                        <span className="underline text-green-600 font-extrabold">{pin.fullBarrels}</span>
-                      </span>
-                      <span className="flex flex-col items-center">
-                        <span className="text-xs text-red-600 font-bold">T</span>
-                        <span className="underline text-red-600 font-extrabold">{pin.emptyBarrels}</span>
-                      </span>
+                  <span className="ml-auto flex flex-row items-center gap-3">
+                    <span className="flex flex-row items-center gap-1">
+                      <span className="text-xs text-green-600 font-bold">F</span>
+                      <span className="underline text-green-600 font-extrabold text-lg">{pin.fullBarrels}</span>
+                    </span>
+                    <span className="flex flex-row items-center gap-1">
+                      <span className="text-xs text-red-600 font-bold">T</span>
+                      <span className="underline text-red-600 font-extrabold text-lg">{pin.emptyBarrels}</span>
                     </span>
                   </span>
                 </div>
@@ -341,53 +352,58 @@ export default function Dashboard() {
           <InfoWindowF
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
+            options={{
+              pixelOffset: new window.google.maps.Size(0, -25),
+              maxWidth: 340,
+              minWidth: 260,
+              disableAutoPan: false,
+            }}
           >
             <div
-              className="p-5 rounded-xl"
+              className="p-3 rounded-xl"
               style={{
                 background: "#fff",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-                maxWidth: 380,
-                minWidth: 290,
-                width: "100vw",
-                fontSize: 22,
+                width: "94vw",
+                maxWidth: 340,
+                minWidth: 260,
+                fontSize: 19,
                 fontWeight: 800,
-                maxHeight: "90vh",
-                overflow: "auto",
-                color: "#000", // ekstra sikkerhet for sort tekst
+                color: "#000",
+                overflow: "visible",
+                maxHeight: "none",
               }}
             >
               <div className="flex justify-between items-center mb-3">
-                <span className="text-3xl font-extrabold text-black">{selected.name || "Uten navn"}</span>
+                <span className="text-2xl font-extrabold text-black">{selected.name || "Uten navn"}</span>
                 {editMode ? (
                   <button
                     onClick={() => setEditMode(false)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-extrabold"
+                    className="bg-blue-600 text-white px-4 py-2 rounded text-lg font-extrabold"
                   >
                     Avslutt
                   </button>
                 ) : (
                   <button
                     onClick={() => startEdit(selected)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-extrabold"
+                    className="bg-blue-600 text-white px-4 py-2 rounded text-lg font-extrabold"
                   >
                     Edit
                   </button>
                 )}
               </div>
-
               {/* Fulle og Tomme */}
               {!editMode ? (
                 <div className="flex justify-around mb-3">
-                  <div className="flex flex-col items-center">
-                    <span className="text-green-700 font-bold text-lg">Fulle</span>
-                    <span className="text-3xl font-extrabold text-green-700">
+                  <div className="flex flex-row items-center gap-3">
+                    <span className="text-green-700 font-bold text-base">Fulle:</span>
+                    <span className="text-2xl font-extrabold text-green-700">
                       {selected.fullBarrels}
                     </span>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-red-700 font-bold text-lg">Tomme</span>
-                    <span className="text-3xl font-extrabold text-red-700">
+                  <div className="flex flex-row items-center gap-3">
+                    <span className="text-red-700 font-bold text-base">Tomme:</span>
+                    <span className="text-2xl font-extrabold text-red-700">
                       {selected.emptyBarrels}
                     </span>
                   </div>
@@ -396,11 +412,19 @@ export default function Dashboard() {
                 <div className="flex justify-around mb-3 gap-1 items-center">
                   {/* Fulle fat */}
                   <div className="flex flex-col items-center">
-                    <span className="text-green-700 font-bold text-lg">Fulle</span>
+                    <span className="text-green-700 font-bold text-base">Fulle</span>
                     <div className="flex flex-row items-center gap-1">
+                      <button
+                        className="bg-green-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
+                        onClick={() =>
+                          adjustBarrels(selected, "fullBarrels", 1)
+                        }
+                      >
+                        +
+                      </button>
                       <input
                         type="number"
-                        className="w-16 text-2xl font-extrabold text-center text-black border"
+                        className="w-10 text-xl font-extrabold text-center text-black border"
                         value={
                           editValues.fullBarrels !== undefined
                             ? editValues.fullBarrels
@@ -412,17 +436,10 @@ export default function Dashboard() {
                             fullBarrels: Number(e.target.value),
                           })
                         }
+                        min={0}
                       />
                       <button
-                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
-                        onClick={() =>
-                          adjustBarrels(selected, "fullBarrels", 1)
-                        }
-                      >
-                        +
-                      </button>
-                      <button
-                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
+                        className="bg-red-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
                         onClick={() =>
                           adjustBarrels(selected, "fullBarrels", -1)
                         }
@@ -433,11 +450,19 @@ export default function Dashboard() {
                   </div>
                   {/* Tomme fat */}
                   <div className="flex flex-col items-center">
-                    <span className="text-red-700 font-bold text-lg">Tomme</span>
+                    <span className="text-red-700 font-bold text-base">Tomme</span>
                     <div className="flex flex-row items-center gap-1">
+                      <button
+                        className="bg-green-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
+                        onClick={() =>
+                          adjustBarrels(selected, "emptyBarrels", 1)
+                        }
+                      >
+                        +
+                      </button>
                       <input
                         type="number"
-                        className="w-16 text-2xl font-extrabold text-center text-black border"
+                        className="w-10 text-xl font-extrabold text-center text-black border"
                         value={
                           editValues.emptyBarrels !== undefined
                             ? editValues.emptyBarrels
@@ -449,17 +474,10 @@ export default function Dashboard() {
                             emptyBarrels: Number(e.target.value),
                           })
                         }
+                        min={0}
                       />
                       <button
-                        className="bg-green-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
-                        onClick={() =>
-                          adjustBarrels(selected, "emptyBarrels", 1)
-                        }
-                      >
-                        +
-                      </button>
-                      <button
-                        className="bg-red-500 text-white text-4xl rounded-full w-12 h-12 flex items-center justify-center ml-1 font-extrabold"
+                        className="bg-red-500 text-white text-3xl rounded-full w-10 h-10 flex items-center justify-center font-extrabold"
                         onClick={() =>
                           adjustBarrels(selected, "emptyBarrels", -1)
                         }
@@ -472,13 +490,13 @@ export default function Dashboard() {
               )}
 
               {/* Fuel og utstyr */}
-              <div className="mb-1 flex flex-col gap-2 mt-2">
+              <div className="mb-1 flex flex-col gap-1 mt-2">
                 <div>
                   <span className="font-bold text-black">Fuelhenger: </span>
                   {editMode ? (
                     <input
                       type="number"
-                      className="border w-28 p-1 text-xl font-extrabold text-black"
+                      className="border w-24 p-1 text-base font-extrabold text-black"
                       value={
                         editValues.trailer !== undefined
                           ? editValues.trailer
@@ -500,7 +518,7 @@ export default function Dashboard() {
                   {editMode ? (
                     <input
                       type="number"
-                      className="border w-28 p-1 text-xl font-extrabold text-black"
+                      className="border w-24 p-1 text-base font-extrabold text-black"
                       value={
                         editValues.tank !== undefined
                           ? editValues.tank
@@ -522,7 +540,7 @@ export default function Dashboard() {
                   {editMode ? (
                     <input
                       type="text"
-                      className="border w-44 p-1 text-xl font-extrabold text-black"
+                      className="border w-40 p-1 text-base font-extrabold text-black"
                       value={
                         editValues.equipment !== undefined
                           ? editValues.equipment
@@ -545,18 +563,18 @@ export default function Dashboard() {
               {editMode && (
                 <div className="flex items-center mt-4">
                   <button
-                    className="bg-blue-600 text-white px-6 py-2 rounded text-2xl font-extrabold flex-1"
+                    className="bg-blue-600 text-white px-4 py-2 rounded text-lg font-extrabold flex-1"
                     onClick={() => handleManualEdit(selected)}
                   >
                     Lagre
                   </button>
                   <button
-                    className="bg-red-600 text-white px-4 py-2 rounded text-lg font-extrabold ml-3"
+                    className="bg-red-600 text-white px-3 py-2 rounded text-base font-extrabold ml-3"
                     style={{
-                      flex: "0 0 90px",
-                      minWidth: 50,
-                      maxWidth: 110,
-                      fontSize: "1.1rem",
+                      flex: "0 0 70px",
+                      minWidth: 40,
+                      maxWidth: 80,
+                      fontSize: "1.05rem",
                     }}
                     onClick={() => deletePin(selected)}
                   >
