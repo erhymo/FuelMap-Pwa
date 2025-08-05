@@ -45,7 +45,7 @@ function ensureArray(equipment: string | string[] | undefined): string[] {
 const center = { lat: 60.472, lng: 8.4689 };
 const mapContainerStyle = { width: "100%", height: "100vh" };
 
-// Popup portal
+// Portal for popup
 function Portal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
@@ -169,6 +169,7 @@ export default function Dashboard() {
       updateData[field] = value;
     }
     if (editValues.equipment) updateData.equipment = editValues.equipment;
+    if (editValues.note !== undefined) updateData.note = editValues.note;
     await updateDoc(doc(db, "pins", pin.id), updateData);
     setEditValues({});
     setEditMode(false);
@@ -252,16 +253,15 @@ export default function Dashboard() {
       trailer: pin.trailer,
       tank: pin.tank,
       equipment: ensureArray(pin.equipment),
+      note: pin.note,
       newEquipment: "",
     });
     setShowEquip(true);
     setShowNote(true);
   };
 
-  // --- For Portal (slett-popup)
   useEffect(() => {
     if (!showDeleteConfirm) return;
-    // Hindrer bakgrunn scroll når popup vises
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
@@ -442,10 +442,8 @@ export default function Dashboard() {
                 justifyContent: "flex-start",
               }}
             >
-              <div style={{
-                display: "flex", alignItems: "center", marginBottom: 5, gap: 8
-              }}>
-                <span style={{ fontSize: 22, fontWeight: 900, flex: 1 }}>{selected.name || "Uten navn"}</span>
+              {/* Rediger/Avslutt-knapp på egen rad øverst, helt til venstre */}
+              <div style={{ width: "100%", display: "flex", justifyContent: "flex-start", marginBottom: 2 }}>
                 {editMode ? (
                   <button
                     onClick={() => setEditMode(false)}
@@ -457,8 +455,7 @@ export default function Dashboard() {
                       fontWeight: 900,
                       fontSize: 15,
                       border: "none",
-                      marginLeft: 0,
-                      marginRight: "auto"
+                      marginLeft: 0
                     }}
                   >
                     Avslutt
@@ -474,31 +471,31 @@ export default function Dashboard() {
                       fontWeight: 900,
                       fontSize: 15,
                       border: "none",
-                      marginLeft: 0,
-                      marginRight: "auto"
+                      marginLeft: 0
                     }}
                   >
                     Rediger
                   </button>
                 )}
               </div>
-              {/* Fulle og tomme fat */}
+              {/* Navn */}
+              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 2, textAlign: "left" }}>{selected.name || "Uten navn"}</div>
+              {/* Fulle og tomme fat, på linjer helt til venstre */}
               {!editMode && (
-                <div style={{ display: "flex", justifyContent: "center", gap: 36, marginBottom: 5, alignItems: "center" }}>
-                  <div>
-                    <span style={{ color: "#059669", fontSize: 20 }}>Fulle:</span>{" "}
-                    <span style={{ fontWeight: 900, fontSize: 26 }}>{selected.fullBarrels}</span>
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <span style={{ color: "#059669", fontSize: 19, fontWeight: 800 }}>Fulle:</span>
+                    <span style={{ fontWeight: 900, fontSize: 23 }}>{selected.fullBarrels}</span>
                   </div>
-                  <div>
-                    <span style={{ color: "#dc2626", fontSize: 20 }}>Tomme:</span>{" "}
-                    <span style={{ fontWeight: 900, fontSize: 26 }}>{selected.emptyBarrels}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ color: "#dc2626", fontSize: 19, fontWeight: 800 }}>Tomme:</span>
+                    <span style={{ fontWeight: 900, fontSize: 23 }}>{selected.emptyBarrels}</span>
                   </div>
-                </div>
+                </>
               )}
-
               {/* Henger/tank */}
               {!editMode && (
-                <div style={{ fontSize: 15, marginBottom: 2 }}>
+                <div style={{ fontSize: 15, marginBottom: 2, textAlign: "left" }}>
                   <div>Henger: <b>{selected.trailer || 0} L</b></div>
                   <div>Tank: <b>{selected.tank || 0} L</b></div>
                 </div>
@@ -528,7 +525,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Utstyr-liste COLLAPSE */}
+              {/* Utstyr-liste COLLAPSE NEDERST */}
               <div style={{ marginTop: 6 }}>
                 <button
                   style={{
@@ -563,7 +560,7 @@ export default function Dashboard() {
                   style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 7 }}
                 >
                   {/* Fulle */}
-                  <div style={{ display: "flex", gap: 13, alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ display: "flex", gap: 13, alignItems: "center", justifyContent: "flex-start" }}>
                     <span style={{ color: "#059669", fontSize: 19, minWidth: 56 }}>Fulle</span>
                     <button
                       type="button"
@@ -625,7 +622,7 @@ export default function Dashboard() {
                     >–</button>
                   </div>
                   {/* Tomme */}
-                  <div style={{ display: "flex", gap: 13, alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ display: "flex", gap: 13, alignItems: "center", justifyContent: "flex-start" }}>
                     <span style={{ color: "#dc2626", fontSize: 19, minWidth: 56 }}>Tomme</span>
                     <button
                       type="button"
@@ -760,7 +757,7 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  {/* Utstyr-liste COLLAPSE og redigering */}
+                  {/* Utstyr-liste COLLAPSE og redigering NEDERST */}
                   <div style={{ marginTop: 7 }}>
                     <button
                       type="button"
@@ -839,21 +836,21 @@ export default function Dashboard() {
                     )}
                   </div>
                   {/* Lagre/slett */}
-                  <div style={{ display: "flex", alignItems: "center", marginTop: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 10, gap: 9 }}>
                     <button
                       type="submit"
                       style={{
                         background: "#2563eb",
                         color: "#fff",
                         borderRadius: 7,
-                        padding: "8px 0",
+                        padding: "14px 0",
                         fontWeight: 900,
                         fontSize: 15,
                         border: "none",
-                        flex: 3,
-                        marginRight: 7,
-                        minWidth: 95,
-                        maxWidth: 130
+                        flex: 1,
+                        minWidth: 90,
+                        maxWidth: 120,
+                        height: 46
                       }}
                     >
                       Lagre
@@ -864,13 +861,14 @@ export default function Dashboard() {
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: 7,
-                        padding: "7px 16px",
+                        padding: "14px 0",
                         fontWeight: 900,
-                        fontSize: 13,
+                        fontSize: 15,
                         border: "none",
-                        minWidth: 40,
-                        maxWidth: 55,
-                        marginLeft: 0
+                        flex: 1,
+                        minWidth: 80,
+                        maxWidth: 120,
+                        height: 46
                       }}
                       onClick={() => setShowDeleteConfirm(true)}
                     >
@@ -883,7 +881,7 @@ export default function Dashboard() {
           </InfoWindowF>
         )}
       </GoogleMap>
-      {/* Slettebekreftelse-popup (alltid synlig, også på web) */}
+      {/* Slettebekreftelse-popup */}
       {showDeleteConfirm && (
         <div
           style={{
