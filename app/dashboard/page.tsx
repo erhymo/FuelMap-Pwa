@@ -74,6 +74,8 @@ export default function Dashboard() {
   const [editMode, setEditMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEquip, setShowEquip] = useState(false);
+  const [showNote, setShowNote] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   useEffect(() => {
@@ -221,6 +223,8 @@ export default function Dashboard() {
       setDropdownOpen(false);
       setEditMode(false);
       setShowDeleteConfirm(false);
+      setShowEquip(false);
+      setShowNote(false);
     }
   };
 
@@ -234,6 +238,8 @@ export default function Dashboard() {
       equipment: ensureArray(pin.equipment),
       newEquipment: "",
     });
+    setShowEquip(true);
+    setShowNote(true);
   };
 
   if (!isLoaded) return <p className="text-black font-bold text-xl">Laster kart...</p>;
@@ -274,7 +280,7 @@ export default function Dashboard() {
                       </>
                     )}
                     {pin.type === "helipad" && (
-                      <img src="/helipad-yellow.svg" alt="helipad" style={{ width: 30, height: 30 }} />
+                      <img src="https://maps.google.com/mapfiles/kml/shapes/heliport.png" alt="helipad" style={{ width: 30, height: 30 }} />
                     )}
                   </span>
                 </div>
@@ -308,6 +314,8 @@ export default function Dashboard() {
               setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
               setEditMode(false);
               setShowDeleteConfirm(false);
+              setShowEquip(false);
+              setShowNote(false);
             }}
             icon={{
               url:
@@ -317,7 +325,7 @@ export default function Dashboard() {
                     ? (pin.fullBarrels > 2
                         ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
                         : "http://maps.google.com/mapfiles/ms/icons/red-dot.png")
-                    : "/helipad-yellow.svg",
+                    : "https://maps.google.com/mapfiles/kml/shapes/heliport.png",
               scaledSize: new google.maps.Size(48, 48),
             }}
           />
@@ -327,8 +335,9 @@ export default function Dashboard() {
           <InfoWindowF
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
+            options={{ maxWidth: 370, minWidth: 180, pixelOffset: new window.google.maps.Size(0, -10) }}
           >
-            <div className="p-3 text-2xl font-extrabold text-black">
+            <div className="p-2 text-xl font-extrabold text-black" style={{ minWidth: 160 }}>
               <div className="mb-2 font-extrabold">Nytt punkt</div>
               <div>
                 <label className="text-black font-extrabold">
@@ -380,8 +389,8 @@ export default function Dashboard() {
             position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             onCloseClick={() => setSelected(null)}
             options={{
-              maxWidth: 380,
-              minWidth: 180,
+              maxWidth: 350,
+              minWidth: 170,
               pixelOffset: new window.google.maps.Size(0, -10),
               disableAutoPan: false,
             }}
@@ -389,25 +398,27 @@ export default function Dashboard() {
             <div
               style={{
                 background: "#fff",
-                borderRadius: 14,
-                padding: 12,
+                borderRadius: 12,
+                padding: 10,
                 fontSize: 15,
                 fontWeight: 700,
                 color: "#000",
-                width: "97vw",
-                maxWidth: 370,
-                minWidth: 170,
+                minWidth: 140,
+                width: "95vw",
+                maxWidth: 330,
                 wordBreak: "break-word",
                 boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
                 boxSizing: "border-box",
-                maxHeight: "90vh",
-                overflowY: "auto",
+                maxHeight: "98vh",
+                overflowY: "visible",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-start",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5,
+              }}>
                 <span style={{ fontSize: 21, fontWeight: 900 }}>{selected.name || "Uten navn"}</span>
                 {editMode ? (
                   <button
@@ -442,46 +453,101 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Fulle og tomme fat */}
               {!editMode && (
-                <>
-                  <div style={{ color: "#059669", marginBottom: 1, fontSize: 17 }}>Fulle: <b>{selected.fullBarrels}</b></div>
-                  <div style={{ color: "#dc2626", marginBottom: 6, fontSize: 17 }}>Tomme: <b>{selected.emptyBarrels}</b></div>
-                  <div>Henger: <b>{selected.trailer || 0} L</b></div>
-                  <div>Tank: <b>{selected.tank || 0} L</b></div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 24, marginBottom: 4 }}>
                   <div>
-                    Utstyr:
-                    {(selected.equipment && selected.equipment.length > 0) ? (
-                      <ul style={{ marginTop: 2 }}>
-                        {selected.equipment.map((eq, i) => (
-                          <li key={i}>- {eq}</li>
-                        ))}
-                      </ul>
-                    ) : <span> -</span>}
+                    <span style={{ color: "#059669" }}>Fulle: </span>
+                    <b>{selected.fullBarrels}</b>
                   </div>
-                  {selected.note && <div>Notat: <b>{selected.note}</b></div>}
-                </>
+                  <div>
+                    <span style={{ color: "#dc2626" }}>Tomme: </span>
+                    <b>{selected.emptyBarrels}</b>
+                  </div>
+                </div>
               )}
 
+              {/* Henger/tank */}
+              {!editMode && (
+                <div style={{ fontSize: 14, marginBottom: 2 }}>
+                  <div>Henger: <b>{selected.trailer || 0} L</b></div>
+                  <div>Tank: <b>{selected.tank || 0} L</b></div>
+                </div>
+              )}
+
+              {/* Utstyr-liste COLLAPSE */}
+              <div style={{ marginTop: 4 }}>
+                <button
+                  style={{
+                    background: "#f3f4f6",
+                    border: "none",
+                    fontWeight: 800,
+                    fontSize: 14,
+                    color: "#111",
+                    padding: "3px 7px",
+                    borderRadius: 5,
+                    marginBottom: 2
+                  }}
+                  onClick={() => setShowEquip((prev) => !prev)}
+                >
+                  {showEquip ? "−" : "+"} Utstyr
+                </button>
+                {showEquip && (selected.equipment && selected.equipment.length > 0 ? (
+                  <ul style={{ marginTop: 1, marginBottom: 0, fontWeight: 500, fontSize: 14 }}>
+                    {selected.equipment.map((eq, i) => (
+                      <li key={i}>- {eq}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span style={{ marginLeft: 7, fontSize: 13 }}>Ingen utstyr registrert</span>
+                ))}
+              </div>
+
+              {/* Notat COLLAPSE */}
+              {selected.note && (
+                <div style={{ marginTop: 3 }}>
+                  <button
+                    style={{
+                      background: "#f3f4f6",
+                      border: "none",
+                      fontWeight: 800,
+                      fontSize: 14,
+                      color: "#111",
+                      padding: "3px 7px",
+                      borderRadius: 5,
+                      marginBottom: 2
+                    }}
+                    onClick={() => setShowNote((prev) => !prev)}
+                  >
+                    {showNote ? "−" : "+"} Notat
+                  </button>
+                  {showNote && (
+                    <div style={{ fontWeight: 500, fontSize: 14, marginLeft: 7 }}>{selected.note}</div>
+                  )}
+                </div>
+              )}
+
+              {/* REDIGERINGSMODUS */}
               {editMode && (
                 <form
                   onSubmit={(e) => { e.preventDefault(); handleManualEdit(selected); }}
-                  style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 7 }}
+                  style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 5 }}
                 >
-                  <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 5, textAlign: "center" }}>
+                  <div style={{ fontSize: 19, fontWeight: 800, textAlign: "center" }}>
                     {selected.name || "Uten navn"}
                   </div>
                   {/* Fulle */}
-                  <div style={{ display: "flex", gap: 11, alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
-                    <span style={{ color: "#059669", fontSize: 16, minWidth: 54 }}>Fulle</span>
+                  <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#059669", fontSize: 15, minWidth: 50 }}>Fulle</span>
                     <button
                       type="button"
                       style={{
                         background: "#22c55e",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 44,
-                        height: 44,
-                        fontSize: 27,
+                        width: 40,
+                        height: 40,
+                        fontSize: 23,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -491,10 +557,10 @@ export default function Dashboard() {
                     <input
                       type="number"
                       style={{
-                        width: 50,
+                        width: 38,
                         textAlign: "center",
                         fontWeight: 800,
-                        fontSize: 19
+                        fontSize: 17
                       }}
                       value={
                         editValues.fullBarrels !== undefined
@@ -522,9 +588,9 @@ export default function Dashboard() {
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 44,
-                        height: 44,
-                        fontSize: 27,
+                        width: 40,
+                        height: 40,
+                        fontSize: 23,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -533,17 +599,17 @@ export default function Dashboard() {
                     >–</button>
                   </div>
                   {/* Tomme */}
-                  <div style={{ display: "flex", gap: 11, alignItems: "center", justifyContent: "center", marginBottom: 7 }}>
-                    <span style={{ color: "#dc2626", fontSize: 16, minWidth: 54 }}>Tomme</span>
+                  <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#dc2626", fontSize: 15, minWidth: 50 }}>Tomme</span>
                     <button
                       type="button"
                       style={{
                         background: "#22c55e",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 44,
-                        height: 44,
-                        fontSize: 27,
+                        width: 40,
+                        height: 40,
+                        fontSize: 23,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -553,10 +619,10 @@ export default function Dashboard() {
                     <input
                       type="number"
                       style={{
-                        width: 50,
+                        width: 38,
                         textAlign: "center",
                         fontWeight: 800,
-                        fontSize: 19
+                        fontSize: 17
                       }}
                       value={
                         editValues.emptyBarrels !== undefined
@@ -584,9 +650,9 @@ export default function Dashboard() {
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: "50%",
-                        width: 44,
-                        height: 44,
-                        fontSize: 27,
+                        width: 40,
+                        height: 40,
+                        fontSize: 23,
                         border: "none",
                         fontWeight: 800
                       }}
@@ -595,11 +661,11 @@ export default function Dashboard() {
                     >–</button>
                   </div>
                   {/* Henger */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span>Henger (liter):</span>
                     <input
                       type="number"
-                      style={{ width: 80, fontWeight: 700, fontSize: 15 }}
+                      style={{ width: 55, fontWeight: 700, fontSize: 14 }}
                       value={editValues.trailer !== undefined ? (editValues.trailer === 0 ? "" : editValues.trailer) : ""}
                       placeholder="0"
                       onFocus={(e) => {
@@ -617,11 +683,11 @@ export default function Dashboard() {
                     />
                   </div>
                   {/* Tank */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span>Tank (liter):</span>
                     <input
                       type="number"
-                      style={{ width: 80, fontWeight: 700, fontSize: 15 }}
+                      style={{ width: 55, fontWeight: 700, fontSize: 14 }}
                       value={editValues.tank !== undefined ? (editValues.tank === 0 ? "" : editValues.tank) : ""}
                       placeholder="0"
                       onFocus={(e) => {
@@ -639,12 +705,12 @@ export default function Dashboard() {
                     />
                   </div>
                   {/* Utstyr */}
-                  <div>
+                  <div style={{ marginBottom: 4 }}>
                     <span>Utstyr:</span>
-                    <div style={{ display: "flex", marginTop: 2, gap: 5 }}>
+                    <div style={{ display: "flex", marginTop: 2, gap: 4 }}>
                       <input
                         type="text"
-                        style={{ width: 120, fontWeight: 700, fontSize: 14 }}
+                        style={{ width: 95, fontWeight: 700, fontSize: 13 }}
                         value={editValues.newEquipment || ""}
                         onChange={(e) =>
                           setEditValues({
@@ -660,7 +726,7 @@ export default function Dashboard() {
                           background: "#22c55e",
                           color: "#fff",
                           borderRadius: 6,
-                          padding: "3px 11px",
+                          padding: "2px 8px",
                           fontWeight: 800,
                           fontSize: 14,
                           border: "none"
@@ -670,9 +736,9 @@ export default function Dashboard() {
                         +
                       </button>
                     </div>
-                    <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                    <ul style={{ marginTop: 3, marginBottom: 0 }}>
                       {(editValues.equipment || []).map((eq, idx) => (
-                        <li key={idx} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <li key={idx} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <span>- {eq}</span>
                           <button
                             type="button"
@@ -680,13 +746,13 @@ export default function Dashboard() {
                               background: "#ef4444",
                               color: "#fff",
                               borderRadius: "50%",
-                              width: 22,
-                              height: 22,
-                              fontSize: 14,
+                              width: 17,
+                              height: 17,
+                              fontSize: 11,
                               border: "none",
                               fontWeight: 900,
                               marginLeft: 2,
-                              marginTop: -2
+                              marginTop: -1
                             }}
                             onClick={() => removeEquipment(idx)}
                             title="Slett"
@@ -707,10 +773,10 @@ export default function Dashboard() {
                         borderRadius: 7,
                         padding: "8px 0",
                         fontWeight: 900,
-                        fontSize: 16,
+                        fontSize: 15,
                         border: "none",
                         flex: 1,
-                        marginRight: 10
+                        marginRight: 8
                       }}
                     >
                       Lagre
@@ -721,12 +787,12 @@ export default function Dashboard() {
                         background: "#ef4444",
                         color: "#fff",
                         borderRadius: 7,
-                        padding: "4px 10px",
+                        padding: "3px 9px",
                         fontWeight: 900,
-                        fontSize: 11,
+                        fontSize: 10,
                         border: "none",
-                        minWidth: 26,
-                        maxWidth: 38,
+                        minWidth: 22,
+                        maxWidth: 30,
                         marginLeft: 0
                       }}
                       onClick={() => setShowDeleteConfirm(true)}
@@ -734,69 +800,67 @@ export default function Dashboard() {
                       Slett
                     </button>
                   </div>
-                  {/* Slettebekreftelse-popup */}
-                  {showDeleteConfirm && (
-                    <div style={{
-                      position: "fixed",
-                      top: 0, left: 0,
-                      width: "100vw",
-                      height: "100vh",
-                      background: "rgba(0,0,0,0.16)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      zIndex: 9999
-                    }}>
-                      <div style={{
-                        background: "#fff",
-                        borderRadius: 12,
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.19)",
-                        padding: 18,
-                        minWidth: 230,
-                        maxWidth: 340,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center"
-                      }}>
-                        <span style={{ fontWeight: 700, fontSize: 16, marginBottom: 18, color: "#dc2626" }}>
-                          Er du sikker på at du vil slette depot?
-                        </span>
-                        <div style={{ display: "flex", gap: 12 }}>
-                          <button
-                            type="button"
-                            style={{
-                              background: "#ef4444",
-                              color: "#fff",
-                              borderRadius: 7,
-                              padding: "7px 16px",
-                              fontWeight: 900,
-                              fontSize: 13,
-                              border: "none"
-                            }}
-                            onClick={() => deletePin(selected)}
-                          >
-                            Ja, slett
-                          </button>
-                          <button
-                            type="button"
-                            style={{
-                              background: "#f3f4f6",
-                              color: "#222",
-                              borderRadius: 7,
-                              padding: "7px 16px",
-                              fontWeight: 900,
-                              fontSize: 13,
-                              border: "none"
-                            }}
-                            onClick={() => setShowDeleteConfirm(false)}
-                          >
-                            Avbryt
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </form>
+              )}
+              {/* Slettebekreftelse-popup */}
+              {showDeleteConfirm && (
+                <div style={{
+                  position: "fixed",
+                  left: 0, top: 0, width: "100vw", height: "100vh",
+                  background: "rgba(0,0,0,0.14)",
+                  zIndex: 99999,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <div style={{
+                    background: "#fff",
+                    borderRadius: 11,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                    padding: 16,
+                    minWidth: 200,
+                    maxWidth: 280,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center"
+                  }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: "#dc2626" }}>
+                      Er du sikker på at du vil slette depot?
+                    </span>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        type="button"
+                        style={{
+                          background: "#ef4444",
+                          color: "#fff",
+                          borderRadius: 7,
+                          padding: "6px 14px",
+                          fontWeight: 900,
+                          fontSize: 12,
+                          border: "none"
+                        }}
+                        onClick={() => deletePin(selected)}
+                      >
+                        Ja, slett
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          background: "#f3f4f6",
+                          color: "#222",
+                          borderRadius: 7,
+                          padding: "6px 14px",
+                          fontWeight: 900,
+                          fontSize: 12,
+                          border: "none"
+                        }}
+                        onClick={() => setShowDeleteConfirm(false)}
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </InfoWindowF>
