@@ -1,4 +1,5 @@
-'use client';
+# We'll create a downloadable file for the user with their updated code.
+code = r"""'use client';
 
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import {
@@ -44,6 +45,17 @@ function ensureArray(equipment: string | string[] | undefined): string[] {
 
 const center = { lat: 60.472, lng: 8.4689 };
 const mapContainerStyle = { width: "100%", height: "100vh" };
+
+// === Inline helipad SVG (gul sirkel + svart H) som data-URL ===
+const HELIPAD_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Helipad">
+  <circle cx="32" cy="32" r="30" fill="#FFD200" stroke="#000000" stroke-width="2"/>
+  <rect x="18" y="14" width="8" height="36" fill="#000000" rx="1"/>
+  <rect x="38" y="14" width="8" height="36" fill="#000000" rx="1"/>
+  <rect x="18" y="29" width="28" height="6" fill="#000000" rx="1"/>
+</svg>
+`.trim();
+const HELIPAD_ICON_URL = `data:image/svg+xml;utf8,${encodeURIComponent(HELIPAD_SVG)}`;
 
 // Portal for popup
 function Portal({ children }: { children: React.ReactNode }) {
@@ -306,7 +318,7 @@ export default function Dashboard() {
                       </>
                     )}
                     {pin.type === "helipad" && (
-                      <img src="https://maps.google.com/mapfiles/kml/shapes/heliport.png" alt="helipad" style={{ width: 30, height: 30 }} />
+                      <img src={HELIPAD_ICON_URL} alt="helipad" style={{ width: 30, height: 30 }} />
                     )}
                   </span>
                 </div>
@@ -351,7 +363,7 @@ export default function Dashboard() {
                     ? (pin.fullBarrels > 2
                         ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
                         : "http://maps.google.com/mapfiles/ms/icons/red-dot.png")
-                    : "https://maps.google.com/mapfiles/kml/shapes/heliport.png",
+                    : HELIPAD_ICON_URL,
               scaledSize: new google.maps.Size(48, 48),
             }}
           />
@@ -946,4 +958,7 @@ export default function Dashboard() {
       )}
     </div>
   );
-}
+}"""
+with open("/mnt/data/dashboard_page.tsx", "w", encoding="utf-8") as f:
+    f.write(code)
+print("Saved to /mnt/data/dashboard_page.tsx")
