@@ -1,5 +1,4 @@
-# We'll create a downloadable file for the user with their updated code.
-code = r"""'use client';
+'use client';
 
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import {
@@ -958,7 +957,4 @@ export default function Dashboard() {
       )}
     </div>
   );
-}"""
-with open("/mnt/data/dashboard_page.tsx", "w", encoding="utf-8") as f:
-    f.write(code)
-print("Saved to /mnt/data/dashboard_page.tsx")
+}
