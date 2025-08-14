@@ -1,220 +1,113 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  deleteDoc,
-  doc
-} from "firebase/firestore";
-
-// --- Typing ---
-interface User {
-  id: string;
-  name: string;
-  pin: string;
-  createdAt?: any;
-}
-interface LogEntry {
-  id: string;
-  name: string;
-  action: string;
-  details: string;
-  timestamp: any;
-}
-
-const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+import React, { useEffect, useState } from "react";
+import { db } from "@/app/firebase";
+import { collection, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
 
 export default function AdminPage() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loginPass, setLoginPass] = useState("");
+  const [depots, setDepots] = useState<any[]>([]);
   const [name, setName] = useState("");
-  const [pin, setPin] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [message, setMessage] = useState("");
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [showLogs, setShowLogs] = useState(false);
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [type, setType] = useState("fueldepot");
 
+  // Hent depots fra Firestore
   useEffect(() => {
-    if (loggedIn) {
-      loadUsers();
-      loadLogs();
-    }
-  }, [loggedIn]);
+    const fetchData = async () => {
+      const querySnapshot = await getDocs(collection(db, "depots"));
+      setDepots(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchData();
+  }, []);
 
-  async function loadUsers() {
-    const q = query(collection(db, "users"));
-    const snap = await getDocs(q);
-    setUsers(snap.docs.map(doc => ({
-      id: doc.id,
-      ...(doc.data() as Omit<User, "id">)
-    })));
-  }
-
-  async function loadLogs() {
-    const q = query(collection(db, "logs"), orderBy("timestamp", "desc"));
-    const snap = await getDocs(q);
-    setLogs(snap.docs.map(doc => ({
-      id: doc.id,
-      ...(doc.data() as Omit<LogEntry, "id">)
-    })));
-  }
-
-  async function handleAddUser(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setMessage("");
-
-    if (!/^\d{4}$/.test(pin)) {
-      setMessage("PIN må være 4 tall.");
-      return;
-    }
-
-    const q = query(collection(db, "users"), where("pin", "==", pin));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      setMessage("Denne PIN-koden er allerede i bruk!");
-      return;
-    }
-
-    await addDoc(collection(db, "users"), {
+  // Legg til depot
+  const addDepot = async () => {
+    if (!name || !lat || !lng) return alert("Fyll inn alle felt!");
+    await addDoc(collection(db, "depots"), {
       name,
-      pin,
-      createdAt: serverTimestamp(),
+      lat: parseFloat(lat),
+      lng: parseFloat(lng),
+      type,
+      full: 0,
+      empty: 0,
     });
-
     setName("");
-    setPin("");
-    setMessage("Bruker lagt til!");
-    loadUsers();
-  }
+    setLat("");
+    setLng("");
+    setType("fueldepot");
+    alert("Depot lagt til!");
+  };
 
-  async function handleDeleteUser(id: string) {
-    await deleteDoc(doc(db, "users", id));
-    loadUsers();
-  }
-
-  function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (loginPass === ADMIN_PASS) {
-      setLoggedIn(true);
-      setLoginPass("");
-    } else {
-      setMessage("Feil admin-passord.");
+  // Slett depot
+  const removeDepot = async (id: string) => {
+    if (confirm("Sikker på at du vil slette?")) {
+      await deleteDoc(doc(db, "depots", id));
+      setDepots((prev) => prev.filter((d) => d.id !== id));
     }
-  }
-
-  if (!loggedIn) {
-    return (
-      <form onSubmit={handleLogin} className="flex flex-col items-center justify-center min-h-screen gap-6 bg-black">
-        <div className="text-4xl font-bold mb-6 text-white drop-shadow">Admin Login</div>
-        <input
-          type="password"
-          placeholder="Admin-passord"
-          className="border border-gray-400 p-4 rounded text-2xl text-black bg-white placeholder-gray-500 focus:outline-none focus:border-blue-500 shadow"
-          value={loginPass}
-          onChange={e => setLoginPass(e.target.value)}
-        />
-        <button className="bg-blue-600 text-white px-10 py-3 rounded text-2xl font-bold shadow hover:bg-blue-700 transition">
-          Logg inn
-        </button>
-        {message && <div className="text-red-400 mt-2">{message}</div>}
-      </form>
-    );
-  }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 bg-white p-6 rounded shadow text-lg text-gray-900">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">Legg til ansatt</h2>
-      <form onSubmit={handleAddUser} className="flex gap-2 mb-6">
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-2xl font-bold mb-4">Admin-panel</h1>
+
+      {/* Nytt depot */}
+      <div className="bg-white p-4 rounded shadow mb-6">
+        <h2 className="font-semibold mb-2">Legg til nytt depot</h2>
         <input
           type="text"
-          placeholder="Fullt navn"
-          className="border p-2 rounded w-1/2 text-gray-900"
+          placeholder="Navn"
           value={name}
-          required
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
+          className="border p-2 mr-2"
         />
         <input
           type="text"
-          placeholder="PIN (4 siffer)"
-          className="border p-2 rounded w-1/3 text-gray-900"
-          value={pin}
-          required
-          maxLength={4}
-          onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
+          placeholder="Lat"
+          value={lat}
+          onChange={(e) => setLat(e.target.value)}
+          className="border p-2 mr-2"
         />
-        <button className="bg-green-600 text-white px-5 py-2 rounded">Legg til</button>
-      </form>
-      {message && <div className="text-green-600 mb-4">{message}</div>}
+        <input
+          type="text"
+          placeholder="Lng"
+          value={lng}
+          onChange={(e) => setLng(e.target.value)}
+          className="border p-2 mr-2"
+        />
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="border p-2 mr-2"
+        >
+          <option value="fueldepot">Fueldepot</option>
+          <option value="base">Base</option>
+          <option value="helipad">Helipad</option>
+        </select>
+        <button
+          onClick={addDepot}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+        >
+          Legg til
+        </button>
+      </div>
 
-      <h3 className="font-bold text-xl mb-3 text-gray-900">Alle ansatte:</h3>
-      <table className="w-full text-base mb-8 text-gray-900">
-        <thead>
-          <tr>
-            <th className="text-left text-gray-900">Navn</th>
-            <th className="text-gray-900">PIN</th>
-            <th className="text-gray-900">Registrert</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id} className="border-b last:border-b-0">
-              <td className="text-gray-900">{user.name}</td>
-              <td className="text-center text-gray-900">{user.pin}</td>
-              <td className="text-gray-900">{user.createdAt?.toDate?.().toLocaleString?.() ?? ""}</td>
-              <td>
-                <button
-                  onClick={() => handleDeleteUser(user.id)}
-                  className="bg-red-500 text-white text-xs px-2 py-1 rounded"
-                >
-                  Slett
-                </button>
-              </td>
-            </tr>
+      {/* Liste over depots */}
+      <div className="bg-white p-4 rounded shadow">
+        <h2 className="font-semibold mb-2">Eksisterende depots</h2>
+        <ul>
+          {depots.map((depot) => (
+            <li key={depot.id} className="flex justify-between border-b py-2">
+              <span>{depot.name}</span>
+              <button
+                onClick={() => removeDepot(depot.id)}
+                className="text-red-600"
+              >
+                Slett
+              </button>
+            </li>
           ))}
-        </tbody>
-      </table>
-
-      <button
-        className="bg-blue-500 text-white px-6 py-2 rounded font-bold mb-4"
-        onClick={() => { setShowLogs(!showLogs); if (!showLogs) loadLogs(); }}
-      >
-        {showLogs ? "Skjul logg" : "Vis logg"}
-      </button>
-
-      {showLogs && (
-        <div className="bg-gray-50 mt-4 rounded p-3 max-h-96 overflow-auto">
-          <h3 className="font-bold mb-2 text-lg text-gray-900">Logg (siste hendelser)</h3>
-          <table className="w-full text-sm text-gray-900">
-            <thead>
-              <tr>
-                <th className="text-gray-900">Navn</th>
-                <th className="text-gray-900">Handling</th>
-                <th className="text-gray-900">Detaljer</th>
-                <th className="text-gray-900">Tidspunkt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(log => (
-                <tr key={log.id} className="border-b last:border-b-0">
-                  <td className="text-gray-900">{log.name}</td>
-                  <td className="text-gray-900">{log.action}</td>
-                  <td className="text-gray-900">{log.details}</td>
-                  <td className="text-gray-900">{log.timestamp?.toDate?.().toLocaleString?.() ?? ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {logs.length === 0 && <div className="text-gray-500 mt-2">Ingen logger funnet.</div>}
-        </div>
-      )}
+        </ul>
+      </div>
     </div>
   );
 }

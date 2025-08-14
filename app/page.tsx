@@ -1,74 +1,27 @@
-'use client';
+"use client";
 
-import Image from "next/image";
-import { useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import React from "react";
+import Link from "next/link";
 
-export default function Home() {
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (!/^\d{4}$/.test(pin)) {
-      setError("PIN må være 4 siffer.");
-      return;
-    }
-    const q = query(collection(db, "users"), where("pin", "==", pin));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      setError("Feil PIN-kode.");
-      return;
-    }
-    const user = snap.docs[0].data();
-    localStorage.setItem("fuelmap_session", JSON.stringify({
-      name: user.name,
-      pin,
-      expires: Date.now() + 5 * 60 * 60 * 1000, // 5 timer
-    }));
-    router.push("/dashboard");
-  }
-
+export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-100 to-blue-200">
-      <div className="mb-10">
-        <Image
-          src="/Airlift-logo.png"
-          alt="Airlift logo"
-          width={320}
-          height={90}
-          priority
-        />
+    <main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
+      <h1 className="text-3xl font-bold mb-6">Velkommen til FuelMap</h1>
+      <p className="mb-6 text-center">
+        Velg hvor du vil gå:
+      </p>
+      <div className="flex gap-4">
+        <Link href="/dashboard">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            Dashboard
+          </button>
+        </Link>
+        <Link href="/admin">
+          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+            Admin
+          </button>
+        </Link>
       </div>
-      <form
-        onSubmit={handleLogin}
-        className="bg-white shadow-xl rounded-xl p-8 flex flex-col items-center gap-6 min-w-[340px]"
-      >
-        <h2 className="text-2xl font-bold mb-3 text-blue-900">Logg inn med PIN</h2>
-        <input
-          type="password"
-          inputMode="numeric"
-          pattern="\d*"
-          maxLength={4}
-          placeholder="Skriv inn 4-sifret PIN"
-          className="border rounded p-4 text-xl text-center tracking-widest bg-gray-100"
-          value={pin}
-          onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
-        />
-        <button
-          type="submit"
-          className="bg-blue-700 hover:bg-blue-800 text-white py-3 rounded text-xl font-bold w-full"
-        >
-          Logg inn
-        </button>
-        {error && (
-          <div className="text-red-600 text-center text-lg">{error}</div>
-        )}
-      </form>
-    </div>
+    </main>
   );
 }
