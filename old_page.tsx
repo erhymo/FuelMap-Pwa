@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { db } from "../firebase";
+import { db } from "../firebase"; // ✅ Riktig import
 import {
   collection,
   getDocs,
@@ -104,7 +104,9 @@ export default function DashboardPage() {
             onClick={() => setFlyTo([depot.lat, depot.lng])}
           >
             <div className="flex items-center gap-2">
-              {depot.type === "base" && <img src="/Airlift-logo.png" alt="Base" className="w-6 h-6" />}
+              {depot.type === "base" && (
+                <img src="/Airlift-logo.png" alt="Base" className="w-6 h-6" />
+              )}
               {depot.type === "fueldepot" && (
                 <span style={{ color: depot.full <= 2 ? "red" : "green" }}>⛽</span>
               )}
@@ -114,7 +116,9 @@ export default function DashboardPage() {
               <span>{depot.name}</span>
             </div>
             {depot.type === "fueldepot" && (
-              <span style={{ color: depot.full <= 2 ? "red" : "green" }}>{depot.full}</span>
+              <span style={{ color: depot.full <= 2 ? "red" : "green" }}>
+                {depot.full}
+              </span>
             )}
           </div>
         ))}
@@ -122,7 +126,11 @@ export default function DashboardPage() {
 
       {/* Kart */}
       <div className="flex-1">
-        <MapContainer center={[60.472, 8.4689]} zoom={5} style={{ height: "100%", width: "100%" }}>
+        <MapContainer
+          center={[60.472, 8.4689]}
+          zoom={5}
+          style={{ height: "100%", width: "100%" }}
+        >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <FlyToLocation position={flyTo} />
 
@@ -138,7 +146,9 @@ export default function DashboardPage() {
                 key={depot.id}
                 position={[depot.lat, depot.lng]}
                 icon={icon}
-                eventHandlers={{ click: () => setSelectedDepot(depot) }}
+                eventHandlers={{
+                  click: () => setSelectedDepot(depot),
+                }}
               />
             );
           })}
