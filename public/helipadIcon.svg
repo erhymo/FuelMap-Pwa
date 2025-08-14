@@ -1,0 +1,4 @@
+icon: {
+  url: '/helipadIcon.svg',
+  scaledSize: new google.maps.Size(40, 40)
+}
