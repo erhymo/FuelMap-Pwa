@@ -1,242 +1,229 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { db } from "@/app/firebase"; // ✅ Riktig import
 import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-  InfoWindow
-} from "@react-google-maps/api";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
-import { FaHelicopter } from "react-icons/fa";
-import { IoChevronDown, IoChevronUp } from "react-icons/io5";
-import { collection, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/app/firebase/firebase";
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import { IoTrash, IoChevronDown, IoChevronUp } from "react-icons/io5";
 
+// --- Ikoner ---
+const baseIcon = new L.Icon({
+  iconUrl: "/Airlift-logo.png",
+  iconSize: [32, 32],
+});
 
-const containerStyle = {
-  width: "100%",
-  height: "100vh"
-};
+const fuelDepotGreen = new L.Icon({
+  iconUrl:
+    "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+  iconSize: [32, 32],
+});
 
-const center = {
-  lat: 60.472,
-  lng: 8.4689
-};
+const fuelDepotRed = new L.Icon({
+  iconUrl:
+    "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+  iconSize: [32, 32],
+});
 
-const getIcon = (type: string, fulleFat: number) => {
-  if (type === "helipad") {
-    return {
-      url: "/helipadIcon.svg",
-      scaledSize: new window.google.maps.Size(40, 40)
-    };
-  }
-  if (type === "fueldepot") {
-    return {
-      url: fulleFat <= 2 ? "/redMarker.svg" : "/greenMarker.svg",
-      scaledSize: new window.google.maps.Size(40, 40)
-    };
-  }
-  return {
-    url: "/blueMarker.svg",
-    scaledSize: new window.google.maps.Size(40, 40)
-  };
-};
+const helipadBlue = new L.Icon({
+  iconUrl: "/helipadIcon.svg",
+  iconSize: [32, 32],
+});
+
+// --- Zoom & Pan helper ---
+function FlyToLocation({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, 17);
+    }
+  }, [position, map]);
+  return null;
+}
 
 export default function DashboardPage() {
   const [depots, setDepots] = useState<any[]>([]);
   const [selectedDepot, setSelectedDepot] = useState<any>(null);
-  const [showNote, setShowNote] = useState(false);
-  const [showEquipment, setShowEquipment] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const mapRef = useRef<any>(null);
+  const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
+  const [collapsed, setCollapsed] = useState<{ utstyr: boolean; notat: boolean }>({
+    utstyr: true,
+    notat: true,
+  });
 
+  // --- Hent data fra Firestore ---
   useEffect(() => {
-    const fetchDepots = async () => {
+    const fetchData = async () => {
       const querySnapshot = await getDocs(collection(db, "depots"));
-      const depotList: any[] = [];
-      querySnapshot.forEach((doc) => {
-        depotList.push({ id: doc.id, ...doc.data() });
-      });
-      setDepots(depotList);
+      setDepots(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     };
-    fetchDepots();
+    fetchData();
   }, []);
 
-  const handleMinusFull = async () => {
-    if (!selectedDepot) return;
-    if (selectedDepot.fulleFat > 0) {
-      const updatedDepot = {
-        ...selectedDepot,
-        fulleFat: selectedDepot.fulleFat - 1,
-        tommeFat: (selectedDepot.tommeFat || 0) + 1
-      };
-      setSelectedDepot(updatedDepot);
-      await updateDoc(doc(db, "depots", selectedDepot.id), updatedDepot);
+  // --- Lagre depot ---
+  const saveDepot = async (depotId: string, updatedData: any) => {
+    await updateDoc(doc(db, "depots", depotId), updatedData);
+    setDepots((prev) =>
+      prev.map((d) => (d.id === depotId ? { ...d, ...updatedData } : d))
+    );
+  };
+
+  // --- Slett depot ---
+  const deleteDepot = async (depotId: string) => {
+    if (confirm("Er du sikker på at du vil slette dette depotet?")) {
+      await deleteDoc(doc(db, "depots", depotId));
+      setDepots((prev) => prev.filter((d) => d.id !== depotId));
+      setSelectedDepot(null);
     }
   };
 
-  const handleSave = async () => {
-    if (!selectedDepot) return;
-    await updateDoc(doc(db, "depots", selectedDepot.id), selectedDepot);
-    setSelectedDepot(null);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedDepot) return;
-    await deleteDoc(doc(db, "depots", selectedDepot.id));
-    setDepots(depots.filter((d) => d.id !== selectedDepot.id));
-    setSelectedDepot(null);
-    setConfirmDelete(false);
+  // --- Minusknapp: Flytter fra fulle til tomme fat ---
+  const handleMinusFull = (depot: any) => {
+    if (depot.full > 0) {
+      const updatedDepot = {
+        ...depot,
+        full: depot.full - 1,
+        empty: depot.empty + 1,
+      };
+      saveDepot(depot.id, updatedDepot);
+    }
   };
 
   return (
-    <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={center}
-        zoom={5}
-        onLoad={(map) => (mapRef.current = map)}
-      >
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div className="w-64 bg-gray-900 text-white p-2 overflow-y-auto">
         {depots.map((depot) => (
-          <Marker
+          <div
             key={depot.id}
-            position={depot.position}
-            icon={getIcon(depot.type, depot.fulleFat)}
-            onClick={() => {
-              setSelectedDepot(depot);
-              if (mapRef.current) {
-                mapRef.current.panTo(depot.position);
-                mapRef.current.setZoom(10);
-              }
-            }}
-          />
-        ))}
-
-        {selectedDepot && (
-          <InfoWindow
-            position={selectedDepot.position}
-            onCloseClick={() => setSelectedDepot(null)}
+            className="flex items-center justify-between p-2 border-b border-gray-700 cursor-pointer hover:bg-gray-800"
+            onClick={() => setFlyTo([depot.lat, depot.lng])}
           >
-            <div style={{ width: "250px", fontSize: "14px", fontWeight: "bold", color: "#000" }}>
-              <h3>{selectedDepot.name}</h3>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span>Fulle fat: {selectedDepot.fulleFat}</span>
-                <button
-                  onClick={handleMinusFull}
+            <div className="flex items-center gap-2">
+              {depot.type === "base" && <img src="/Airlift-logo.png" alt="Base" className="w-6 h-6" />}
+              {depot.type === "fueldepot" && (
+                <span
                   style={{
-                    background: "#ccc",
-                    border: "none",
-                    padding: "4px 8px",
-                    fontSize: "16px",
-                    cursor: "pointer"
+                    color: depot.full <= 2 ? "red" : "green",
                   }}
                 >
-                  −
-                </button>
-              </div>
-              <div>Tomme fat: {selectedDepot.tommeFat}</div>
-
-              {/* Collapse for Equipment */}
-              <div style={{ marginTop: "8px" }}>
-                <div
-                  onClick={() => setShowEquipment(!showEquipment)}
-                  style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                >
-                  <strong>Utstyr</strong>
-                  {showEquipment ? <IoChevronUp /> : <IoChevronDown />}
-                </div>
-                {showEquipment && (
-                  <div>
-                    {(selectedDepot.utstyr || []).map((item: string, idx: number) => (
-                      <div key={idx} style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span>{item}</span>
-                        <button
-                          onClick={() => {
-                            const updated = { ...selectedDepot, utstyr: selectedDepot.utstyr.filter((_: any, i: number) => i !== idx) };
-                            setSelectedDepot(updated);
-                          }}
-                          style={{ background: "red", color: "#fff", border: "none", padding: "2px 6px" }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <input
-                      type="text"
-                      placeholder="Legg til utstyr"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && e.currentTarget.value.trim() !== "") {
-                          const updated = {
-                            ...selectedDepot,
-                            utstyr: [...(selectedDepot.utstyr || []), e.currentTarget.value.trim()]
-                          };
-                          setSelectedDepot(updated);
-                          e.currentTarget.value = "";
-                        }
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Collapse for Note */}
-              <div style={{ marginTop: "8px" }}>
-                <div
-                  onClick={() => setShowNote(!showNote)}
-                  style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-                >
-                  <strong>Notat</strong>
-                  {showNote ? <IoChevronUp /> : <IoChevronDown />}
-                </div>
-                {showNote && (
-                  <textarea
-                    value={selectedDepot.notat || ""}
-                    onChange={(e) =>
-                      setSelectedDepot({ ...selectedDepot, notat: e.target.value })
-                    }
-                    rows={3}
-                    style={{ width: "100%" }}
-                  />
-                )}
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-                <button
-                  onClick={handleSave}
-                  style={{ background: "green", color: "#fff", border: "none", padding: "6px 12px" }}
-                >
-                  Lagre
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  style={{ background: "red", color: "#fff", border: "none", padding: "6px 12px" }}
-                >
-                  Slett
-                </button>
-              </div>
-
-              {confirmDelete && (
-                <div style={{ marginTop: "8px", background: "#eee", padding: "8px" }}>
-                  <p>Er du sikker på at du vil slette?</p>
-                  <button
-                    onClick={handleDelete}
-                    style={{ background: "red", color: "#fff", border: "none", padding: "4px 8px", marginRight: "4px" }}
-                  >
-                    Ja
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    style={{ background: "#ccc", border: "none", padding: "4px 8px" }}
-                  >
-                    Nei
-                  </button>
-                </div>
+                  ⛽
+                </span>
               )}
+              {depot.type === "helipad" && (
+                <img src="/helipadIcon.svg" alt="Helipad" className="w-6 h-6" />
+              )}
+              <span>{depot.name}</span>
             </div>
-          </InfoWindow>
-        )}
-      </GoogleMap>
-    </LoadScript>
+            {depot.type === "fueldepot" && (
+              <span
+                style={{
+                  color: depot.full <= 2 ? "red" : "green",
+                }}
+              >
+                {depot.full}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Kart */}
+      <div className="flex-1">
+        <MapContainer center={[60.472, 8.4689]} zoom={5} style={{ height: "100%", width: "100%" }}>
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <FlyToLocation position={flyTo} />
+
+          {depots.map((depot) => {
+            let icon = baseIcon;
+            if (depot.type === "fueldepot") {
+              icon = depot.full <= 2 ? fuelDepotRed : fuelDepotGreen;
+            } else if (depot.type === "helipad") {
+              icon = helipadBlue;
+            }
+            return (
+              <Marker
+                key={depot.id}
+                position={[depot.lat, depot.lng]}
+                icon={icon}
+                eventHandlers={{
+                  click: () => setSelectedDepot(depot),
+                }}
+              />
+            );
+          })}
+        </MapContainer>
+      </div>
+
+      {/* Popup panel */}
+      {selectedDepot && (
+        <div className="absolute right-0 top-0 w-80 h-full bg-white shadow-lg p-4 overflow-hidden">
+          <div className="flex justify-between items-center border-b pb-2">
+            <h2 className="text-lg font-bold">{selectedDepot.name}</h2>
+            <button onClick={() => deleteDepot(selectedDepot.id)} className="text-red-600">
+              <IoTrash size={24} />
+            </button>
+          </div>
+
+          {selectedDepot.type === "fueldepot" && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <span>Fulle fat:</span>
+                <div className="flex items-center gap-2">
+                  <span>{selectedDepot.full}</span>
+                  <button
+                    onClick={() => handleMinusFull(selectedDepot)}
+                    className="bg-red-500 text-white px-2 py-1 rounded"
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Tomme fat:</span>
+                <span>{selectedDepot.empty}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Collapse Utstyr */}
+          <div className="mt-4 border-t pt-2">
+            <button
+              onClick={() => setCollapsed((c) => ({ ...c, utstyr: !c.utstyr }))}
+              className="flex items-center gap-2"
+            >
+              Utstyr {collapsed.utstyr ? <IoChevronDown /> : <IoChevronUp />}
+            </button>
+            {!collapsed.utstyr && (
+              <ul className="list-disc ml-4 mt-2">
+                {selectedDepot.equipment?.map((item: string, idx: number) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Collapse Notat */}
+          <div className="mt-4 border-t pt-2">
+            <button
+              onClick={() => setCollapsed((c) => ({ ...c, notat: !c.notat }))}
+              className="flex items-center gap-2"
+            >
+              Notat {collapsed.notat ? <IoChevronDown /> : <IoChevronUp />}
+            </button>
+            {!collapsed.notat && <p className="mt-2">{selectedDepot.note}</p>}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
