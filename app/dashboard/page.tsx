@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { db } from "../firebase";
+import { db } from "@/app/firebase"; // ✅ Riktig import
 import {
   collection,
   getDocs,
@@ -114,7 +114,9 @@ export default function DashboardPage() {
               <span>{depot.name}</span>
             </div>
             {depot.type === "fueldepot" && (
-              <span style={{ color: depot.full <= 2 ? "red" : "green" }}>{depot.full}</span>
+              <span style={{ color: depot.full <= 2 ? "red" : "green" }}>
+                {depot.full}
+              </span>
             )}
           </div>
         ))}
@@ -138,7 +140,9 @@ export default function DashboardPage() {
                 key={depot.id}
                 position={[depot.lat, depot.lng]}
                 icon={icon}
-                eventHandlers={{ click: () => setSelectedDepot(depot) }}
+                eventHandlers={{
+                  click: () => setSelectedDepot(depot),
+                }}
               />
             );
           })}
