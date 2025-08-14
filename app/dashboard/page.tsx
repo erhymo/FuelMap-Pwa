@@ -11,7 +11,8 @@ import { FiEdit, FiTrash2 } from "react-icons/fi";
 import { FaHelicopter } from "react-icons/fa";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { collection, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/app/firebase/firebase";
+
 
 const containerStyle = {
   width: "100%",
