@@ -1,8 +1,9 @@
 // app/firebase/index.ts
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
 
-// Bruk dine egne Firebase config-verdier her
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,8 +13,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialiser appen (kun én gang)
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Eksporter Firestore-databasen
 export const db = getFirestore(app);
+export const storage = getStorage(app);
