@@ -39,13 +39,13 @@ interface Pin {
 function ensureArray(equipment: string | string[] | undefined): string[] {
   if (!equipment) return [];
   if (Array.isArray(equipment)) return equipment;
-  return equipment.split('\n').map(s => s.trim()).filter(Boolean);
+  return equipment.split('\\n').map(s => s.trim()).filter(Boolean);
 }
 
 const center = { lat: 60.472, lng: 8.4689 };
 const mapContainerStyle = { width: "100%", height: "100vh" };
 
-// === Inline helipad SVG (gul sirkel + svart H) som data-URL ===
+// === Inline helipad SVG (gul sirkel + svart H) som data-URL (brukes KUN i ny-oppføring) ===
 const HELIPAD_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Helipad">
   <circle cx="32" cy="32" r="30" fill="#FFD200" stroke="#000000" stroke-width="2"/>
@@ -56,7 +56,7 @@ const HELIPAD_SVG = `
 `.trim();
 const HELIPAD_ICON_URL = `data:image/svg+xml;utf8,${encodeURIComponent(HELIPAD_SVG)}`;
 
-// Portal for popup
+// Portal for popup (ikke i bruk akkurat nå, beholdes for eventuell senere bruk)
 function Portal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
@@ -71,6 +71,25 @@ function Portal({ children }: { children: React.ReactNode }) {
   if (!ref.current) return null;
   // @ts-ignore
   return ReactDOM.createPortal(children, ref.current);
+}
+
+// Lineær skalering av ikon-størrelse mot zoom
+function sizeForZoom(zoom: number | undefined, min=24, max=48, zMin=5, zMax=12) {
+  if (zoom === undefined || zoom === null) return max;
+  if (zoom <= zMin) return min;
+  if (zoom >= zMax) return max;
+  const t = (zoom - zMin) / (zMax - zMin);
+  return Math.round(min + t * (max - min));
+}
+
+// Pan kartet slik at info-boblen alltid er synlig
+function panMarkerIntoView(map: google.maps.Map, pos: google.maps.LatLngLiteral) {
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+  const offsetY = isMobile ? 220 : 160; // skyv markørpunktet ned, så boble-toppen vises
+  map.panTo(pos);
+  setTimeout(() => {
+    map.panBy(0, -offsetY);
+  }, 0);
 }
 
 export default function Dashboard() {
@@ -104,6 +123,7 @@ export default function Dashboard() {
   const [showEquip, setShowEquip] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const [zoom, setZoom] = useState<number>(6);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "pins"), (snapshot) => {
@@ -188,39 +208,15 @@ export default function Dashboard() {
     if (updatedPin) setSelected({ id: pin.id, ...(updatedPin as Omit<Pin, "id">), equipment: ensureArray(updatedPin.equipment) });
   };
 
-  const adjustBarrels = (
-    pin: Pin,
-    field: "fullBarrels" | "emptyBarrels",
-    delta: number
-  ) => {
-    let newFull = editValues.fullBarrels ?? pin.fullBarrels;
-    let newEmpty = editValues.emptyBarrels ?? pin.emptyBarrels;
-
-    if (field === "fullBarrels") {
-      if (delta > 0 && newEmpty > 0) {
-        newFull += 1;
-        newEmpty -= 1;
-      } else if (delta < 0 && newFull > 0) {
-        newFull -= 1;
-        newEmpty += 1;
-      }
-    } else {
-      if (delta > 0 && newFull > 0) {
-        newEmpty += 1;
-        newFull -= 1;
-      } else if (delta < 0 && newEmpty > 0) {
-        newEmpty -= 1;
-        newFull += 1;
-      }
-    }
-
-    newFull = Math.max(0, newFull);
-    newEmpty = Math.max(0, newEmpty);
-
+  // Minus-only: én trykk = -1 fra fulle, +1 til tomme
+  const minusOneFromFull = (pin: Pin) => {
+    const currentFull = editValues.fullBarrels ?? pin.fullBarrels;
+    const currentEmpty = editValues.emptyBarrels ?? pin.emptyBarrels;
+    if (currentFull <= 0) return;
     setEditValues((v) => ({
       ...v,
-      fullBarrels: newFull,
-      emptyBarrels: newEmpty,
+      fullBarrels: currentFull - 1,
+      emptyBarrels: currentEmpty + 1,
     }));
   };
 
@@ -245,8 +241,10 @@ export default function Dashboard() {
 
   const flyTo = (pin: Pin) => {
     if (mapRef.current) {
-      mapRef.current.panTo({ lat: Number(pin.lat), lng: Number(pin.lng) });
-      mapRef.current.setZoom(13);
+      const pos = { lat: Number(pin.lat), lng: Number(pin.lng) };
+      mapRef.current.panTo(pos);
+      setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
+      mapRef.current.setZoom(Math.max(mapRef.current.getZoom() ?? 6, 13));
       setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
       setDropdownOpen(false);
       setEditMode(false);
@@ -257,6 +255,7 @@ export default function Dashboard() {
   };
 
   const startEdit = (pin: Pin) => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
     setEditMode(true);
     setEditValues({
       fullBarrels: pin.fullBarrels,
@@ -267,8 +266,8 @@ export default function Dashboard() {
       note: pin.note,
       newEquipment: "",
     });
-    setShowEquip(true);
-    setShowNote(true);
+    setShowEquip(!isMobile);
+    setShowNote(!isMobile);
   };
 
   useEffect(() => {
@@ -283,11 +282,12 @@ export default function Dashboard() {
 
   return (
     <div className="relative w-full h-screen">
-      {/* DEPOTDROPDOWN */}
-      <div className="absolute z-20 left-4 top-4">
+      {/* DEPOTDROPDOWN & PLUSS: flyttet ned under Google-kontroller */}
+      <div className="absolute z-20 left-4 top-24 md:top-28">
         <button
           className="bg-white rounded-full shadow p-3 mb-2 text-3xl font-extrabold text-black"
           onClick={() => setDropdownOpen(!dropdownOpen)}
+          aria-label="Åpne depotliste"
         >
           ☰
         </button>
@@ -302,23 +302,11 @@ export default function Dashboard() {
                   className="flex items-center gap-2 px-2 py-2 rounded hover:bg-green-100 cursor-pointer"
                   onClick={() => flyTo(pin)}
                 >
-                  <span className="font-bold text-lg text-black">{pin.name}</span>
-                  <span className="ml-auto flex flex-row items-center gap-3">
-                    {pin.type === "fueldepot" && (
-                      <>
-                        <span className="flex flex-row items-center gap-1">
-                          <span className="text-xs text-green-600 font-bold">F</span>
-                          <span className="underline text-green-600 font-extrabold text-lg">{pin.fullBarrels}</span>
-                        </span>
-                        <span className="flex flex-row items-center gap-1">
-                          <span className="text-xs text-red-600 font-bold">T</span>
-                          <span className="underline text-red-600 font-extrabold text-lg">{pin.emptyBarrels}</span>
-                        </span>
-                      </>
-                    )}
-                    {pin.type === "helipad" && (
-                      <img src={HELIPAD_ICON_URL} alt="helipad" style={{ width: 30, height: 30 }} />
-                    )}
+                  <span className="font-bold text-lg text-black truncate">{pin.name}</span>
+                  <span className="ml-auto flex flex-row items-center gap-2">
+                    {/* Tall til høyre: grønne (fulle) og røde (tomme) */}
+                    <span className="text-green-600 font-extrabold text-base tabular-nums">{pin.fullBarrels ?? 0}</span>
+                    <span className="text-red-600 font-extrabold text-base tabular-nums">{pin.emptyBarrels ?? 0}</span>
                   </span>
                 </div>
               ))}
@@ -329,6 +317,7 @@ export default function Dashboard() {
           className="bg-green-500 text-white rounded-full shadow p-4 text-4xl mt-3 font-extrabold"
           onClick={() => setAddMode(true)}
           title="Legg til nytt depot"
+          aria-label="Legg til nytt depot"
         >
           +
         </button>
@@ -341,32 +330,54 @@ export default function Dashboard() {
         onClick={handleMapClick}
         onLoad={(map) => {
           mapRef.current = map;
+          setZoom(map.getZoom() ?? 6);
+        }}
+        onZoomChanged={() => {
+          if (mapRef.current) setZoom(mapRef.current.getZoom() ?? zoom);
         }}
       >
-        {pins.map((pin) => (
+        {pins.map((pin) => {
+          const size = sizeForZoom(zoom);
+          return (
+            <MarkerF
+              key={pin.id}
+              position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
+              onClick={() => {
+                const pos = { lat: Number(pin.lat), lng: Number(pin.lng) };
+                setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
+                setEditMode(false);
+                setShowDeleteConfirm(false);
+                setShowEquip(false);
+                setShowNote(false);
+                if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
+              }}
+              icon={{
+                url:
+                  pin.type === "base"
+                    ? "https://maps.google.com/mapfiles/kml/shapes/heliport.png"
+                    : pin.type === "fueldepot"
+                      ? (pin.fullBarrels > 2
+                          ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                          : "http://maps.google.com/mapfiles/ms/icons/red-dot.png")
+                      : "https://maps.google.com/mapfiles/kml/shapes/heliport.png", // helipad beholder gammel stil på eksisterende
+                scaledSize: new google.maps.Size(size, size),
+              }}
+            />
+          );
+        })}
+
+        {/* For ny-oppføring: vis HELIPAD-ikonet som forhåndsvisning KUN når type=helipad */}
+        {selected?.editing && newType === "helipad" && (
           <MarkerF
-            key={pin.id}
-            position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
-            onClick={() => {
-              setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
-              setEditMode(false);
-              setShowDeleteConfirm(false);
-              setShowEquip(false);
-              setShowNote(false);
-            }}
+            position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
             icon={{
-              url:
-                pin.type === "base"
-                  ? "https://maps.google.com/mapfiles/kml/shapes/heliport.png"
-                  : pin.type === "fueldepot"
-                    ? (pin.fullBarrels > 2
-                        ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                        : "http://maps.google.com/mapfiles/ms/icons/red-dot.png")
-                    : HELIPAD_ICON_URL,
-              scaledSize: new google.maps.Size(48, 48),
+              url: HELIPAD_ICON_URL,
+              scaledSize: new google.maps.Size(sizeForZoom(zoom), sizeForZoom(zoom)),
+              anchor: new google.maps.Point(Math.floor(sizeForZoom(zoom)/2), Math.floor(sizeForZoom(zoom)/2)),
             }}
           />
-        ))}
+        )}
+
         {/* Nytt punkt */}
         {selected?.editing && (
           <InfoWindowF
@@ -440,7 +451,7 @@ export default function Dashboard() {
                 fontSize: 15,
                 fontWeight: 700,
                 color: "#000",
-                minWidth: 160,
+                minWidth: 200,
                 width: "96vw",
                 maxWidth: 370,
                 wordBreak: "break-word",
@@ -453,253 +464,117 @@ export default function Dashboard() {
                 justifyContent: "flex-start",
               }}
             >
-              {/* Rediger/Avslutt-knapp på egen rad øverst, helt til venstre */}
-              <div style={{ width: "100%", display: "flex", justifyContent: "flex-start", marginBottom: 2 }}>
-                {editMode ? (
+              {/* Navn øverst, stort */}
+              <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6, textAlign: "left", lineHeight: 1.15 }}>
+                {selected.name || "Uten navn"}
+              </div>
+
+              {/* Rediger-knapp kun i visning; Avslutt-knapp under navnet i redigering */}
+              {!editMode ? (
+                <div style={{ width: "100%", display: "flex", justifyContent: "flex-start", marginBottom: 6 }}>
+                  <button
+                    onClick={() => {
+                      setShowEquip(false);
+                      setShowNote(false);
+                      startEdit(selected);
+                    }}
+                    style={{
+                      background: "#2563eb",
+                      color: "#fff",
+                      borderRadius: 6,
+                      padding: "6px 14px",
+                      fontWeight: 900,
+                      fontSize: 15,
+                      border: "none",
+                    }}
+                  >
+                    Rediger
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
                   <button
                     onClick={() => setEditMode(false)}
                     style={{
                       background: "#2563eb",
                       color: "#fff",
                       borderRadius: 6,
-                      padding: "6px 14px",
+                      padding: "6px 16px",
                       fontWeight: 900,
                       fontSize: 15,
                       border: "none",
-                      marginLeft: 0
                     }}
                   >
                     Avslutt
                   </button>
-                ) : (
-                  <button
-                    onClick={() => setShowEquip(false) || setShowNote(false) || startEdit(selected)}
-                    style={{
-                      background: "#2563eb",
-                      color: "#fff",
-                      borderRadius: 6,
-                      padding: "6px 14px",
-                      fontWeight: 900,
-                      fontSize: 15,
-                      border: "none",
-                      marginLeft: 0
-                    }}
-                  >
-                    Rediger
-                  </button>
-                )}
-              </div>
-              {/* Navn */}
-              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 2, textAlign: "left" }}>{selected.name || "Uten navn"}</div>
-              {/* Fulle og tomme fat, på linjer helt til venstre */}
+                </div>
+              )}
+
+              {/* Visningsmodus: tall og info */}
               {!editMode && (
                 <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ color: "#059669", fontSize: 19, fontWeight: 800 }}>Fulle:</span>
-                    <span style={{ fontWeight: 900, fontSize: 23 }}>{selected.fullBarrels}</span>
+                    <span style={{ fontWeight: 900, fontSize: 26 }}>{selected.fullBarrels}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                     <span style={{ color: "#dc2626", fontSize: 19, fontWeight: 800 }}>Tomme:</span>
-                    <span style={{ fontWeight: 900, fontSize: 23 }}>{selected.emptyBarrels}</span>
+                    <span style={{ fontWeight: 900, fontSize: 26 }}>{selected.emptyBarrels}</span>
+                  </div>
+                  <div style={{ fontSize: 16, marginBottom: 8, textAlign: "left", lineHeight: 1.2 }}>
+                    <div>Henger (liter): <b>{selected.trailer || 0}</b></div>
+                    <div>Tank (liter): <b>{selected.tank || 0}</b></div>
                   </div>
                 </>
               )}
-              {/* Henger/tank */}
-              {!editMode && (
-                <div style={{ fontSize: 15, marginBottom: 2, textAlign: "left" }}>
-                  <div>Henger: <b>{selected.trailer || 0} L</b></div>
-                  <div>Tank: <b>{selected.tank || 0} L</b></div>
-                </div>
-              )}
-
-              {/* Notat COLLAPSE */}
-              {selected.note && (
-                <div style={{ marginTop: 6 }}>
-                  <button
-                    style={{
-                      background: "#f3f4f6",
-                      border: "none",
-                      fontWeight: 800,
-                      fontSize: 15,
-                      color: "#111",
-                      padding: "3px 8px",
-                      borderRadius: 5,
-                      marginBottom: 1
-                    }}
-                    onClick={() => setShowNote((prev) => !prev)}
-                  >
-                    {showNote ? "−" : "+"} Notat
-                  </button>
-                  {showNote && (
-                    <div style={{ fontWeight: 500, fontSize: 15, marginLeft: 7 }}>{selected.note}</div>
-                  )}
-                </div>
-              )}
-
-              {/* Utstyr-liste COLLAPSE NEDERST */}
-              <div style={{ marginTop: 6 }}>
-                <button
-                  style={{
-                    background: "#f3f4f6",
-                    border: "none",
-                    fontWeight: 800,
-                    fontSize: 15,
-                    color: "#111",
-                    padding: "3px 8px",
-                    borderRadius: 5,
-                    marginBottom: 1
-                  }}
-                  onClick={() => setShowEquip((prev) => !prev)}
-                >
-                  {showEquip ? "−" : "+"} Utstyr
-                </button>
-                {showEquip && (selected.equipment && selected.equipment.length > 0 ? (
-                  <ul style={{ marginTop: 1, marginBottom: 0, fontWeight: 500, fontSize: 14 }}>
-                    {selected.equipment.map((eq, i) => (
-                      <li key={i}>- {eq}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span style={{ marginLeft: 7, fontSize: 13 }}>Ingen utstyr registrert</span>
-                ))}
-              </div>
 
               {/* REDIGERINGSMODUS */}
               {editMode && (
                 <form
                   onSubmit={(e) => { e.preventDefault(); handleManualEdit(selected); }}
-                  style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 7 }}
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
                 >
-                  {/* Fulle */}
-                  <div style={{ display: "flex", gap: 13, alignItems: "center", justifyContent: "flex-start" }}>
-                    <span style={{ color: "#059669", fontSize: 19, minWidth: 56 }}>Fulle</span>
+                  {/* Fulle (label + tall midtstilt; minus-knapp til høyre) */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <span style={{ color: "#059669", fontSize: 18, fontWeight: 800 }}>Fulle</span>
+                      <span style={{ fontSize: 28, fontWeight: 900 }}>
+                        {(editValues.fullBarrels ?? selected.fullBarrels) || 0}
+                      </span>
+                    </div>
                     <button
                       type="button"
-                      style={{
-                        background: "#22c55e",
-                        color: "#fff",
-                        borderRadius: "50%",
-                        width: 42,
-                        height: 42,
-                        fontSize: 25,
-                        border: "none",
-                        fontWeight: 800
-                      }}
-                      onClick={() => adjustBarrels(selected, "fullBarrels", 1)}
-                      tabIndex={-1}
-                    >+</button>
-                    <input
-                      type="number"
-                      style={{
-                        width: 46,
-                        textAlign: "center",
-                        fontWeight: 900,
-                        fontSize: 22
-                      }}
-                      value={
-                        editValues.fullBarrels !== undefined
-                          ? (editValues.fullBarrels === 0 ? "" : editValues.fullBarrels)
-                          : ""
-                      }
-                      placeholder="0"
-                      onFocus={(e) => {
-                        if (e.target.value === "0") {
-                          e.target.value = "";
-                          setEditValues({ ...editValues, fullBarrels: undefined });
-                        }
-                      }}
-                      onChange={(e) =>
-                        setEditValues({
-                          ...editValues,
-                          fullBarrels: Number(e.target.value),
-                        })
-                      }
-                      min={0}
-                    />
-                    <button
-                      type="button"
+                      aria-label="Trekk fra ett fullt fat og legg til ett tomt"
                       style={{
                         background: "#ef4444",
                         color: "#fff",
-                        borderRadius: "50%",
-                        width: 42,
-                        height: 42,
-                        fontSize: 25,
+                        borderRadius: 8,
+                        width: 44,
+                        height: 44,
+                        fontSize: 28,
                         border: "none",
-                        fontWeight: 800
+                        fontWeight: 900
                       }}
-                      onClick={() => adjustBarrels(selected, "fullBarrels", -1)}
-                      tabIndex={-1}
-                    >–</button>
+                      onClick={() => minusOneFromFull(selected)}
+                    >
+                      –
+                    </button>
                   </div>
-                  {/* Tomme */}
-                  <div style={{ display: "flex", gap: 13, alignItems: "center", justifyContent: "flex-start" }}>
-                    <span style={{ color: "#dc2626", fontSize: 19, minWidth: 56 }}>Tomme</span>
-                    <button
-                      type="button"
-                      style={{
-                        background: "#22c55e",
-                        color: "#fff",
-                        borderRadius: "50%",
-                        width: 42,
-                        height: 42,
-                        fontSize: 25,
-                        border: "none",
-                        fontWeight: 800
-                      }}
-                      onClick={() => adjustBarrels(selected, "emptyBarrels", 1)}
-                      tabIndex={-1}
-                    >+</button>
-                    <input
-                      type="number"
-                      style={{
-                        width: 46,
-                        textAlign: "center",
-                        fontWeight: 900,
-                        fontSize: 22
-                      }}
-                      value={
-                        editValues.emptyBarrels !== undefined
-                          ? (editValues.emptyBarrels === 0 ? "" : editValues.emptyBarrels)
-                          : ""
-                      }
-                      placeholder="0"
-                      onFocus={(e) => {
-                        if (e.target.value === "0") {
-                          e.target.value = "";
-                          setEditValues({ ...editValues, emptyBarrels: undefined });
-                        }
-                      }}
-                      onChange={(e) =>
-                        setEditValues({
-                          ...editValues,
-                          emptyBarrels: Number(e.target.value),
-                        })
-                      }
-                      min={0}
-                    />
-                    <button
-                      type="button"
-                      style={{
-                        background: "#ef4444",
-                        color: "#fff",
-                        borderRadius: "50%",
-                        width: 42,
-                        height: 42,
-                        fontSize: 25,
-                        border: "none",
-                        fontWeight: 800
-                      }}
-                      onClick={() => adjustBarrels(selected, "emptyBarrels", -1)}
-                      tabIndex={-1}
-                    >–</button>
+
+                  {/* Tomme (label + tall midtstilt; ingen knapp) */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <span style={{ color: "#dc2626", fontSize: 18, fontWeight: 800 }}>Tomme</span>
+                    <span style={{ fontSize: 28, fontWeight: 900 }}>
+                      {(editValues.emptyBarrels ?? selected.emptyBarrels) || 0}
+                    </span>
                   </div>
+
                   {/* Henger */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span>Henger (liter):</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>Henger (liter):</span>
                     <input
                       type="number"
-                      style={{ width: 63, fontWeight: 800, fontSize: 17 }}
+                      style={{ width: 80, fontWeight: 800, fontSize: 16 }}
                       value={editValues.trailer !== undefined ? (editValues.trailer === 0 ? "" : editValues.trailer) : ""}
                       placeholder="0"
                       onFocus={(e) => {
@@ -717,11 +592,11 @@ export default function Dashboard() {
                     />
                   </div>
                   {/* Tank */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span>Tank (liter):</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>Tank (liter):</span>
                     <input
                       type="number"
-                      style={{ width: 63, fontWeight: 800, fontSize: 17 }}
+                      style={{ width: 80, fontWeight: 800, fontSize: 16 }}
                       value={editValues.tank !== undefined ? (editValues.tank === 0 ? "" : editValues.tank) : ""}
                       placeholder="0"
                       onFocus={(e) => {
@@ -739,8 +614,8 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* Notat COLLAPSE */}
-                  <div style={{ marginTop: 7 }}>
+                  {/* Utstyr COLLAPSE (nederst) */}
+                  <div>
                     <button
                       type="button"
                       style={{
@@ -749,38 +624,9 @@ export default function Dashboard() {
                         fontWeight: 800,
                         fontSize: 15,
                         color: "#111",
-                        padding: "3px 8px",
-                        borderRadius: 5,
-                        marginBottom: 1
-                      }}
-                      onClick={() => setShowNote((prev) => !prev)}
-                    >
-                      {showNote ? "−" : "+"} Notat
-                    </button>
-                    {showNote && (
-                      <input
-                        type="text"
-                        style={{ width: "100%", fontWeight: 700, fontSize: 15, marginLeft: 3, marginTop: 2 }}
-                        value={editValues.note !== undefined ? editValues.note : (selected.note || "")}
-                        onChange={e => setEditValues({ ...editValues, note: e.target.value })}
-                        placeholder="Legg til eller endre notat"
-                      />
-                    )}
-                  </div>
-
-                  {/* Utstyr-liste COLLAPSE og redigering NEDERST */}
-                  <div style={{ marginTop: 7 }}>
-                    <button
-                      type="button"
-                      style={{
-                        background: "#f3f4f6",
-                        border: "none",
-                        fontWeight: 800,
-                        fontSize: 15,
-                        color: "#111",
-                        padding: "3px 8px",
-                        borderRadius: 5,
-                        marginBottom: 1
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        marginBottom: 6
                       }}
                       onClick={() => setShowEquip((prev) => !prev)}
                     >
@@ -788,10 +634,10 @@ export default function Dashboard() {
                     </button>
                     {showEquip && (
                       <>
-                        <div style={{ display: "flex", marginTop: 2, gap: 4 }}>
+                        <div style={{ display: "flex", marginTop: 6, gap: 6 }}>
                           <input
                             type="text"
-                            style={{ width: 135, fontWeight: 700, fontSize: 13 }}
+                            style={{ flex: 1, fontWeight: 700, fontSize: 14 }}
                             value={editValues.newEquipment || ""}
                             onChange={(e) =>
                               setEditValues({
@@ -807,9 +653,9 @@ export default function Dashboard() {
                               background: "#22c55e",
                               color: "#fff",
                               borderRadius: 6,
-                              padding: "2px 8px",
+                              padding: "4px 10px",
                               fontWeight: 800,
-                              fontSize: 14,
+                              fontSize: 16,
                               border: "none"
                             }}
                             onClick={addEquipment}
@@ -817,9 +663,9 @@ export default function Dashboard() {
                             +
                           </button>
                         </div>
-                        <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                        <ul style={{ marginTop: 6, marginBottom: 0 }}>
                           {(editValues.equipment || []).map((eq, idx) => (
-                            <li key={idx} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            <li key={idx} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14 }}>
                               <span>- {eq}</span>
                               <button
                                 type="button"
@@ -846,22 +692,50 @@ export default function Dashboard() {
                       </>
                     )}
                   </div>
-                  {/* Lagre/slett */}
-                  <div style={{ display: "flex", alignItems: "center", marginTop: 10, gap: 9 }}>
+
+                  {/* Notat COLLAPSE helt nederst */}
+                  <div>
+                    <button
+                      type="button"
+                      style={{
+                        background: "#f3f4f6",
+                        border: "none",
+                        fontWeight: 800,
+                        fontSize: 15,
+                        color: "#111",
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        marginBottom: 6
+                      }}
+                      onClick={() => setShowNote((prev) => !prev)}
+                    >
+                      {showNote ? "−" : "+"} Notat
+                    </button>
+                    {showNote && (
+                      <input
+                        type="text"
+                        style={{ width: "100%", fontWeight: 700, fontSize: 15, marginTop: 6 }}
+                        value={editValues.note !== undefined ? editValues.note : (selected.note || "")}
+                        onChange={e => setEditValues({ ...editValues, note: e.target.value })}
+                        placeholder="Legg til eller endre notat"
+                      />
+                    )}
+                  </div>
+
+                  {/* Lagre / Slett nederst. Slett mindre for å unngå feiltouch */}
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 12, gap: 10 }}>
                     <button
                       type="submit"
                       style={{
                         background: "#2563eb",
                         color: "#fff",
-                        borderRadius: 7,
+                        borderRadius: 8,
                         padding: "14px 0",
                         fontWeight: 900,
-                        fontSize: 15,
+                        fontSize: 16,
                         border: "none",
                         flex: 1,
-                        minWidth: 90,
-                        maxWidth: 120,
-                        height: 46
+                        height: 48
                       }}
                     >
                       Lagre
@@ -871,15 +745,13 @@ export default function Dashboard() {
                       style={{
                         background: "#ef4444",
                         color: "#fff",
-                        borderRadius: 7,
-                        padding: "14px 0",
+                        borderRadius: 8,
+                        padding: "12px 0",
                         fontWeight: 900,
-                        fontSize: 15,
+                        fontSize: 14,
                         border: "none",
-                        flex: 1,
-                        minWidth: 80,
-                        maxWidth: 120,
-                        height: 46
+                        width: 120,
+                        height: 44
                       }}
                       onClick={() => setShowDeleteConfirm(true)}
                     >
@@ -910,14 +782,14 @@ export default function Dashboard() {
             borderRadius: 13,
             boxShadow: "0 8px 24px rgba(0,0,0,0.19)",
             padding: 21,
-            minWidth: 200,
-            maxWidth: 300,
+            minWidth: 220,
+            maxWidth: 320,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             border: "2px solid #dc2626"
           }}>
-            <span style={{ fontWeight: 700, fontSize: 16, marginBottom: 16, color: "#dc2626" }}>
+            <span style={{ fontWeight: 700, fontSize: 16, marginBottom: 16, color: "#dc2626", textAlign: "center" }}>
               Er du sikker på at du vil slette depot?
             </span>
             <div style={{ display: "flex", gap: 12 }}>
