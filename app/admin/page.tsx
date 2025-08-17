@@ -1,113 +1,180 @@
-"use client";
+ 
 
-import React, { useEffect, useState } from "react";
-import { db } from "@/app/firebase";
-import { collection, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
+'use client';
+
+import { useState, useEffect } from "react";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { addLog } from "@/lib/log";
+
+type Employee = {
+  id: string;
+  name: string;
+  pin: string;
+};
+
+type LogEntry = {
+  id: string;
+  user: string;
+  action: string;
+  timestamp?: { seconds: number; nanoseconds: number };
+};
 
 export default function AdminPage() {
-  const [depots, setDepots] = useState<any[]>([]);
-  const [name, setName] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
-  const [type, setType] = useState("fueldepot");
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newPin, setNewPin] = useState("");
 
-  // Hent depots fra Firestore
+  // Hent ansatte
   useEffect(() => {
-    const fetchData = async () => {
-      const querySnapshot = await getDocs(collection(db, "depots"));
-      setDepots(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    };
-    fetchData();
+    const unsub = onSnapshot(collection(db, "employees"), (snapshot) => {
+      setEmployees(
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<Employee, "id">),
+        }))
+      );
+    });
+    return () => unsub();
   }, []);
 
-  // Legg til depot
-  const addDepot = async () => {
-    if (!name || !lat || !lng) return alert("Fyll inn alle felt!");
-    await addDoc(collection(db, "depots"), {
-      name,
-      lat: parseFloat(lat),
-      lng: parseFloat(lng),
-      type,
-      full: 0,
-      empty: 0,
+  // Hent logg
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "logs"), (snapshot) => {
+      setLogs(
+        snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<LogEntry, "id">),
+          }))
+          .sort(
+            (a, b) =>
+              (b.timestamp?.seconds ?? 0) - (a.timestamp?.seconds ?? 0)
+          )
+      );
     });
-    setName("");
-    setLat("");
-    setLng("");
-    setType("fueldepot");
-    alert("Depot lagt til!");
+    return () => unsub();
+  }, []);
+
+  // Legg til ansatt
+  const handleAddEmployee = async () => {
+    if (!newName || !newPin) return;
+    await addDoc(collection(db, "employees"), {
+      name: newName,
+      pin: newPin,
+    });
+    await addLog("Admin", `La til ansatt: ${newName} (PIN: ${newPin})`);
+    setNewName("");
+    setNewPin("");
   };
 
-  // Slett depot
-  const removeDepot = async (id: string) => {
-    if (confirm("Sikker på at du vil slette?")) {
-      await deleteDoc(doc(db, "depots", id));
-      setDepots((prev) => prev.filter((d) => d.id !== id));
-    }
+  // Slett ansatt
+  const handleDeleteEmployee = async (id: string, name: string) => {
+    await deleteDoc(doc(db, "employees", id));
+    await addLog("Admin", `Slettet ansatt: ${name}`);
+  };
+
+  // Oppdater ansatt
+  const handleUpdateEmployee = async (
+    id: string,
+    name: string,
+    pin: string
+  ) => {
+    await updateDoc(doc(db, "employees", id), { name, pin });
+    await addLog("Admin", `Oppdaterte ansatt: ${name} (PIN: ${pin})`);
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">Admin-panel</h1>
+    <div className="p-6 space-y-10">
+      <h1 className="text-3xl font-bold mb-4">Adminpanel</h1>
 
-      {/* Nytt depot */}
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <h2 className="font-semibold mb-2">Legg til nytt depot</h2>
-        <input
-          type="text"
-          placeholder="Navn"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-2 mr-2"
-        />
-        <input
-          type="text"
-          placeholder="Lat"
-          value={lat}
-          onChange={(e) => setLat(e.target.value)}
-          className="border p-2 mr-2"
-        />
-        <input
-          type="text"
-          placeholder="Lng"
-          value={lng}
-          onChange={(e) => setLng(e.target.value)}
-          className="border p-2 mr-2"
-        />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="border p-2 mr-2"
-        >
-          <option value="fueldepot">Fueldepot</option>
-          <option value="base">Base</option>
-          <option value="helipad">Helipad</option>
-        </select>
-        <button
-          onClick={addDepot}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-        >
-          Legg til
-        </button>
-      </div>
+      {/* Ansatte */}
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Ansatte</h2>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Fullt navn"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="border px-2 py-1 rounded"
+          />
+          <input
+            type="text"
+            placeholder="PIN"
+            value={newPin}
+            onChange={(e) => setNewPin(e.target.value)}
+            className="border px-2 py-1 rounded w-24"
+          />
+          <button
+            onClick={handleAddEmployee}
+            className="bg-blue-600 text-white px-4 py-1 rounded"
+          >
+            Legg til
+          </button>
+        </div>
 
-      {/* Liste over depots */}
-      <div className="bg-white p-4 rounded shadow">
-        <h2 className="font-semibold mb-2">Eksisterende depots</h2>
-        <ul>
-          {depots.map((depot) => (
-            <li key={depot.id} className="flex justify-between border-b py-2">
-              <span>{depot.name}</span>
-              <button
-                onClick={() => removeDepot(depot.id)}
-                className="text-red-600"
-              >
-                Slett
-              </button>
+        <ul className="space-y-2">
+          {employees.map((emp) => (
+            <li
+              key={emp.id}
+              className="flex items-center justify-between border p-2 rounded"
+            >
+              <div>
+                <span className="font-medium">{emp.name}</span> — PIN:{" "}
+                <span className="font-mono">{emp.pin}</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    handleUpdateEmployee(emp.id, emp.name, emp.pin)
+                  }
+                  className="bg-yellow-500 text-white px-3 py-1 rounded"
+                >
+                  Oppdater
+                </button>
+                <button
+                  onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                  className="bg-red-600 text-white px-3 py-1 rounded"
+                >
+                  Slett
+                </button>
+              </div>
             </li>
           ))}
         </ul>
-      </div>
+      </section>
+
+      {/* Logg */}
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Logg</h2>
+        <ul className="space-y-1">
+          {logs.map((log) => (
+            <li
+              key={log.id}
+              className="text-sm border-b py-1"
+            >
+              <span className="font-medium">{log.user}</span>:{" "}
+              {log.action}{" "}
+              <span className="text-gray-500">
+                (
+                {log.timestamp
+                  ? new Date(log.timestamp.seconds * 1000).toLocaleString()
+                  : "ukjent tid"}
+                )
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

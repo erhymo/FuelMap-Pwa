@@ -1,9 +1,10 @@
-// app/firebase/index.ts
-
-import { initializeApp, getApps, getApp } from "firebase/app";
+// lib/firebase.ts
+import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
+// Din Firebase config (ligger i .env.local)
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -13,7 +14,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Sjekk om vi allerede har en instans
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 export const storage = getStorage(app);

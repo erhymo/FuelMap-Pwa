@@ -1,0 +1,27 @@
+diff --git a/components/dashboard/DepotPopup.tsx b/components/dashboard/DepotPopup.tsx
+index 1234567..89abcde 100644
+--- a/components/dashboard/DepotPopup.tsx
++++ b/components/dashboard/DepotPopup.tsx
+@@ -80,7 +80,7 @@ export default function DepotPopup({ depot, onClose, onUpdate, onDelete }: Depot
+           </button>
+         </div>
+       )}
+-      <button onClick={() => onDelete(depot.id, depot.name)}>
++      <button onClick={() => onDelete(depot.id, depot.name ?? "Ukjent depot")}>
+         Slett depot
+       </button>
+     </div>
+diff --git a/lib/types.ts b/lib/types.ts
+index abcdef0..fedcba9 100644
+--- a/lib/types.ts
++++ b/lib/types.ts
+@@ -20,6 +20,9 @@ export function withDepotDefaults(depot: Partial<Depot>): Depot {
+   };
+ }
+ 
++// Legg til type for depot
++export type DepotType = "base" | "fueldepot";
++
+ export interface LogEntry {
+   id?: string;
+   message: string;

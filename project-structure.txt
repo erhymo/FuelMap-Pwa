@@ -1,0 +1,70 @@
+.
+├── README.md
+├── app
+│   ├── admin
+│   │   ├── firebase.ts
+│   │   └── page.tsx
+│   ├── api
+│   │   └── admin-login
+│   ├── dashboard
+│   │   ├── MapView.tsx
+│   │   └── page.tsx
+│   ├── favicon.ico
+│   ├── firebase
+│   │   ├── index.ts
+│   │   └── log.ts
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components
+│   ├── DashboardContent.tsx
+│   ├── EmployeeList.tsx
+│   ├── LogList.tsx
+│   ├── Login.tsx
+│   └── dashboard
+│       ├── BackupManager.tsx
+│       └── Settings.tsx
+├── eslint.config.mjs
+├── firebase.json
+├── functions
+│   ├── index.js
+│   ├── package-lock.json
+│   └── package.json
+├── middleware.ts
+├── next-env.d.ts
+├── next.config.ts
+├── old_page.tsx
+├── out
+│   ├── 404.html
+│   ├── Airlift-logo.png
+│   ├── _next
+│   │   ├── 7w8nM3NvFKVT38E7qH7wu
+│   │   └── static
+│   ├── admin.html
+│   ├── admin.txt
+│   ├── dashboard.html
+│   ├── dashboard.txt
+│   ├── favicon.ico
+│   ├── helipadIcon.svg
+│   ├── index.html
+│   └── index.txt
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── project-structure.txt
+├── public
+│   ├── 404.html
+│   ├── Airlift-logo.png
+│   ├── helipadIcon.svg
+│   └── index.html
+├── src
+│   └── lib
+│       ├── firebase.ts
+│       └── log.ts
+├── structure.txt
+├── tsconfig.json
+├── vercel.json
+└── y
+    └── index.html
+
+18 directories, 50 files

@@ -1,9 +1,11 @@
-// next.config.ts
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'export',
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
+import type { NextConfig } from "next";
+import path from "path";
+
+const nextConfig: NextConfig = {
+  webpack: (config) => {
+    config.resolve.alias["@"] = path.resolve(__dirname, "src");
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -1,10 +1,13 @@
-"use client";
+import { Depot, withDepotDefaults } from "@/lib/types";
+ 
 
+import Image from "next/image";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { db } from "../firebase"; // ✅ Riktig import
+import { db } from "@/lib/firebase";
 import {
   collection,
   getDocs,
@@ -12,7 +15,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { IoTrash, IoChevronDown, IoChevronUp } from "react-icons/io5";
+import { IoTrash, IoChevronDown, IoChevronUp, IoAdd } from "react-icons/io5";
 
 // --- Ikoner ---
 const baseIcon = new L.Icon({
@@ -46,7 +49,7 @@ function FlyToLocation({ position }: { position: [number, number] | null }) {
   return null;
 }
 
-export default function DashboardPage() {
+export default function MapView() {
   const [depots, setDepots] = useState<any[]>([]);
   const [selectedDepot, setSelectedDepot] = useState<any>(null);
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
@@ -65,10 +68,10 @@ export default function DashboardPage() {
   }, []);
 
   // --- Lagre depot ---
-  const saveDepot = async (depotId: string, updatedData: any) => {
+  const saveDepot = async (depotId: string, updatedData: Record<string, any>) => {
     await updateDoc(doc(db, "depots", depotId), updatedData);
     setDepots((prev) =>
-      prev.map((d) => (d.id === depotId ? { ...d, ...updatedData } : d))
+      prev.map((d) => (d.id === depotId ? withDepotDefaults({ ...d, ...updatedData }) : d))
     );
   };
 
@@ -82,15 +85,30 @@ export default function DashboardPage() {
   };
 
   // --- Minusknapp: Flytter fra fulle til tomme fat ---
-  const handleMinusFull = (depot: any) => {
-    if (depot.full > 0) {
+  const handleMinusFull = (depot: Record<string, any>) => {
+    if (depot.full ?? 0 > 0) {
       const updatedDepot = {
         ...depot,
-        full: depot.full - 1,
+        full: depot.full ?? 0 - 1,
         empty: depot.empty + 1,
       };
       saveDepot(depot.id, updatedDepot);
     }
+  };
+
+  // --- Plussknapp: Øker antall fulle fat ---
+  const handlePlusFull = (depot: Record<string, any>) => {
+    const updatedDepot = { ...depot, full: depot.full ?? 0 + 1 };
+    saveDepot(depot.id, updatedDepot);
+  };
+
+  // --- Plussknapp utstyr ---
+  const handleAddEquipment = (depot: Record<string, any>) => {
+    const updatedDepot = {
+      ...depot,
+      equipment: [...(depot.equipment || []), "Nytt utstyr"],
+    };
+    saveDepot(depot.id, updatedDepot);
   };
 
   return (
@@ -105,25 +123,34 @@ export default function DashboardPage() {
           >
             <div className="flex items-center gap-2">
               {depot.type === "base" && (
-                <img src="/Airlift-logo.png" alt="Base" className="w-6 h-6" />
+                <Image src="/Airlift-logo.png" alt="Base" width={24} height={24} />
               )}
               {depot.type === "fueldepot" && (
-                <span style={{ color: depot.full <= 2 ? "red" : "green" }}>⛽</span>
+                <span
+                  style={{
+                    color: depot.full ?? 0 <= 2 ? "red" : "green",
+                  }}
+                >
+                  ⛽
+                </span>
               )}
               {depot.type === "helipad" && (
-                <img src="/helipadIcon.svg" alt="Helipad" className="w-6 h-6" />
+                <Image src="/helipadIcon.svg" alt="Helipad" width={24} height={24} />
               )}
               <span>{depot.name}</span>
             </div>
             {depot.type === "fueldepot" && (
-              <span style={{ color: depot.full <= 2 ? "red" : "green" }}>
-                {depot.full}
+              <span
+                style={{
+                  color: depot.full ?? 0 <= 2 ? "red" : "green",
+                }}
+              >
+                {depot.full ?? 0}
               </span>
             )}
           </div>
         ))}
       </div>
-
       {/* Kart */}
       <div className="flex-1">
         <MapContainer
@@ -137,7 +164,7 @@ export default function DashboardPage() {
           {depots.map((depot) => {
             let icon = baseIcon;
             if (depot.type === "fueldepot") {
-              icon = depot.full <= 2 ? fuelDepotRed : fuelDepotGreen;
+              icon = depot.full ?? 0 <= 2 ? fuelDepotRed : fuelDepotGreen;
             } else if (depot.type === "helipad") {
               icon = helipadBlue;
             }
@@ -159,29 +186,34 @@ export default function DashboardPage() {
       {selectedDepot && (
         <div className="absolute right-0 top-0 w-80 h-full bg-white shadow-lg p-4 overflow-hidden">
           <div className="flex justify-between items-center border-b pb-2">
-            <h2 className="text-lg font-bold">{selectedDepot.name}</h2>
-            <button onClick={() => deleteDepot(selectedDepot.id)} className="text-red-600">
-              <IoTrash size={24} />
+            <h2 className="text-lg font-bold text-center w-full">
+              {selectedDepot.name}
+            </h2>
+            <button
+              onClick={() => deleteDepot(selectedDepot.id)}
+              className="text-red-600"
+            >
+              <IoTrash size={20} />
             </button>
           </div>
 
           {selectedDepot.type === "fueldepot" && (
             <div className="mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span>Fulle fat:</span>
-                <div className="flex items-center gap-2">
-                  <span>{selectedDepot.full}</span>
-                  <button
-                    onClick={() => handleMinusFull(selectedDepot)}
-                    className="bg-red-500 text-white px-2 py-1 rounded"
-                  >
-                    -
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Tomme fat:</span>
-                <span>{selectedDepot.empty}</span>
+              <div className="flex items-center justify-start gap-4 mb-2">
+                <button
+                  onClick={() => handlePlusFull(selectedDepot)}
+                  className="bg-green-500 text-white px-2 py-1 rounded"
+                >
+                  +
+                </button>
+                <span>{selectedDepot.full}</span>
+                <button
+                  onClick={() => handleMinusFull(selectedDepot)}
+                  className="bg-red-500 text-white px-2 py-1 rounded"
+                >
+                  -
+                </button>
+                <span>Tomme: {selectedDepot.empty}</span>
               </div>
             </div>
           )}
@@ -189,29 +221,51 @@ export default function DashboardPage() {
           {/* Collapse Utstyr */}
           <div className="mt-4 border-t pt-2">
             <button
-              onClick={() => setCollapsed((c) => ({ ...c, utstyr: !c.utstyr }))}
+              onClick={() =>
+                setCollapsed((c) => ({ ...c, utstyr: !c.utstyr }))
+              }
               className="flex items-center gap-2"
             >
               Utstyr {collapsed.utstyr ? <IoChevronDown /> : <IoChevronUp />}
             </button>
             {!collapsed.utstyr && (
-              <ul className="list-disc ml-4 mt-2">
-                {selectedDepot.equipment?.map((item: string, idx: number) => (
-                  <li key={idx}>{item}</li>
-                ))}
-              </ul>
+              <div className="mt-2">
+                <ul className="list-disc ml-4">
+                  {selectedDepot.equipment?.map(
+                    (item: string, idx: number) => (
+                      <li key={idx}>{item}</li>
+                    )
+                  )}
+                </ul>
+                <button
+                  onClick={() => handleAddEquipment(selectedDepot)}
+                  className="bg-blue-500 text-white px-2 py-1 mt-2 rounded"
+                >
+                  <IoAdd size={16} />
+                </button>
+              </div>
             )}
           </div>
 
           {/* Collapse Notat */}
           <div className="mt-4 border-t pt-2">
             <button
-              onClick={() => setCollapsed((c) => ({ ...c, notat: !c.notat }))}
+              onClick={() =>
+                setCollapsed((c) => ({ ...c, notat: !c.notat }))
+              }
               className="flex items-center gap-2"
             >
               Notat {collapsed.notat ? <IoChevronDown /> : <IoChevronUp />}
             </button>
-            {!collapsed.notat && <p className="mt-2">{selectedDepot.note}</p>}
+            {!collapsed.notat && (
+              <textarea
+                value={selectedDepot.note || ""}
+                onChange={(e) =>
+                  saveDepot(selectedDepot.id, { note: e.target.value })
+                }
+                className="w-full mt-2 p-2 border rounded"
+              />
+            )}
           </div>
         </div>
       )}
