@@ -1,18 +1,14 @@
- 
-
-// app/dashboard/page.tsx
 "use client";
 
-import { useState } from "react";
-import Login from "../../components/Login";
-import DashboardContent from "../../components/DashboardContent";
+import dynamic from "next/dynamic";
+
+const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
 export default function DashboardPage() {
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
-
-  if (!employeeId) {
-    return <Login onLogin={(id) => setEmployeeId(id)} />;
-  }
-
-  return <DashboardContent employeeId={employeeId} />;
+  return (
+    <div style={{ width: "100%", height: "100vh" }}>
+      <h1>FuelMap Dashboard</h1>
+      <MapView />
+    </div>
+  );
 }
