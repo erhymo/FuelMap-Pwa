@@ -1,6 +1,7 @@
 "use client";
 import { InfoWindowF } from "@react-google-maps/api";
 
+
 interface Pin {
   id: string;
   lat: number;
@@ -30,35 +31,50 @@ interface DepotPopupProps {
   startEdit: (pin: Pin) => void;
   handleManualEdit: (pin: Pin) => void;
   minusOneFromFull: (pin: Pin) => void;
+  addEquipment: () => void;
   removeEquipment: (idx: number) => void;
-  // setShowDeleteConfirm: (v: boolean) => void;
+  setShowDeleteConfirm: (v: boolean) => void;
   setSelected: (v: Pin | null) => void;
+  deletePin: (pin: Pin) => void;
 }
 
 export default function DepotPopup(props: DepotPopupProps) {
-  
-  const { selected } = props;
-
-  const infoWindowOptions = typeof window !== 'undefined' && window.google && window.google.maps
-    ? { maxWidth: 370, minWidth: 180, pixelOffset: new window.google.maps.Size(0, -10) }
-    : { maxWidth: 370, minWidth: 180 };
+  const {
+    selected,
+    editMode,
+    editValues,
+    setEditMode,
+    setEditValues,
+    setShowEquip,
+    setShowNote,
+    showEquip,
+    showNote,
+    startEdit,
+    handleManualEdit,
+    minusOneFromFull,
+    addEquipment,
+    removeEquipment,
+    setShowDeleteConfirm,
+    setSelected,
+    deletePin,
+  } = props;
+  if (!selected) return null;
 
   return (
-    <InfoWindowF
-      position={{ lat: Number(selected.lat), lng: Number(selected.lng) }}
-  // onCloseClick fjernet, kun 'selected' brukes
-      options={infoWindowOptions}
-    >
-      <div
-        style={{
-          background: "#fff",
-        }}
+    <div style={{ padding: 16, background: 'white', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+      <h2 style={{ marginBottom: 8 }}>{selected.name || 'Depot'}</h2>
+      <p><b>Type:</b> {selected.type}</p>
+      <p><b>Full Barrels:</b> {selected.fullBarrels}</p>
+      <p><b>Empty Barrels:</b> {selected.emptyBarrels}</p>
+      <p><b>Tank:</b> {selected.tank}</p>
+      <p><b>Trailer:</b> {selected.trailer}</p>
+      <p><b>Note:</b> {selected.note || '-'}</p>
+      <button
+        style={{ marginTop: 16, background: '#e53e3e', color: 'white', padding: '8px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold' }}
+        onClick={() => deletePin(selected)}
       >
-        <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6, textAlign: "left", lineHeight: 1.15 }}>
-          {selected.name || "Uten navn"}
-        </div>
-        {/* Her kan du fylle på med mer JSX for popupen */}
-      </div>
-    </InfoWindowF>
+        Slett depot
+      </button>
+    </div>
   );
 }
