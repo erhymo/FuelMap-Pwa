@@ -323,7 +323,9 @@ export default function MapView() {
               position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
               onClick={() => {
                 const pos = { lat: Number(pin.lat), lng: Number(pin.lng) };
-                setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
+                // Fjern editing-feltet for vanlige depoter
+                const { editing, ...rest } = pin;
+                setSelected({ ...rest, equipment: ensureArray(pin.equipment) });
                 setEditMode(false);
                 setShowDeleteConfirm(false);
                 setShowEquip(false);
