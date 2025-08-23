@@ -30,7 +30,6 @@ interface DepotPopupProps {
   showEquip: boolean;
   showNote: boolean;
   startEdit: (pin: Pin) => void;
-  handleManualEdit: (pin: Pin) => void;
   minusOneFromFull: (pin: Pin) => void;
   addEquipment: () => void;
   removeEquipment: (idx: number) => void;
@@ -41,7 +40,7 @@ interface DepotPopupProps {
 }
 
 export default function DepotPopup(props: DepotPopupProps) {
-  const { selected, editMode, editValues, setEditMode, setEditValues, setSelected, deletePin, handleManualEdit, showDeleteConfirm, setShowDeleteConfirm } = props;
+  const { selected, editMode, editValues, setEditMode, setEditValues, setSelected, deletePin, showDeleteConfirm, setShowDeleteConfirm } = props;
   const [showAllEquipment, setShowAllEquipment] = React.useState(false);
   const [equipmentInputs, setEquipmentInputs] = React.useState(editValues.equipment ? editValues.equipment.map(e => e) : selected.equipment ? selected.equipment.map(e => e) : []);
 
@@ -79,7 +78,7 @@ export default function DepotPopup(props: DepotPopupProps) {
         </div>
         {editMode ? (
           <form
-            onSubmit={e => {
+            onSubmit={async e => {
               e.preventDefault();
               const newValues = {
                 ...editValues,
@@ -87,9 +86,43 @@ export default function DepotPopup(props: DepotPopupProps) {
                 tank: editValues.tank !== undefined ? Number(editValues.tank) : selected.tank,
                 trailer: editValues.trailer !== undefined ? Number(editValues.trailer) : selected.trailer,
               };
-              handleManualEdit({ ...selected, ...newValues, equipment: equipmentInputs.filter(e => e.trim() !== "") });
+              try {
+                const { id, ...rest } = { ...selected, ...newValues };
+                const { doc, updateDoc, addDoc, collection } = await import("firebase/firestore");
+                const { db } = await import("@/lib/firebase");
+                if (id === "new") {
+                  // Opprett nytt depot
+                  const docRef = await addDoc(collection(db, "pins"), rest);
+                  if (props.setSelected) {
+                    props.setSelected({ ...rest, id: docRef.id });
+                  }
+                } else {
+                  // Oppdater eksisterende depot
+                  await updateDoc(doc(db, "pins", id), rest);
+                  if (props.setSelected) {
+                    props.setSelected({ ...selected, ...newValues });
+                  }
+                }
+              } catch (err) {
+                console.error("Kunne ikke lagre depot", err);
+              }
+              setEditMode(false);
+              setEditValues({});
             }}
           >
+            {/* Typevalg dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', marginBottom: 18, width: '100%' }}>
+              <span style={{ fontSize: 22, fontWeight: 'bold', color: '#222', marginRight: 18, minWidth: 90 }}>Type</span>
+              <select
+                value={editValues.type ?? selected.type}
+                onChange={e => setEditValues({ ...editValues, type: e.target.value as Pin['type'] })}
+                style={{ fontSize: 20, padding: '6px 12px', borderRadius: 6, border: '1.5px solid #ccc', background: '#fff', color: '#222', minWidth: 120 }}
+              >
+                <option value="fueldepot">Fueldepot</option>
+                <option value="base">Base</option>
+                <option value="helipad">Helipad</option>
+              </select>
+            </div>
             {/* Fulle */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18, width: '100%' }}>
               {/* Fulle */}

@@ -1,3 +1,18 @@
+export interface Pin {
+  id: string;
+  lat: number;
+  lng: number;
+  name: string;
+  type: "base" | "fueldepot" | "helipad";
+  note?: string;
+  fullBarrels: number;
+  emptyBarrels: number;
+  tank: number;
+  trailer: number;
+  equipment: string[];
+  images: string[];
+  createdAt?: number | string;
+}
 export interface Depot {
   id: string;
   type: "base" | "fueldepot";

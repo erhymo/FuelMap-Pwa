@@ -4,6 +4,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import DepotList from "@/components/dashboard/DepotList";
 import DepotPopup from "@/components/dashboard/DepotPopup";
+import { useAddDepot } from "@/components/dashboard/AddDepotHandler";
 import { Pin } from "@/lib/types";
 
 function ensureArray(equipment: string | string[] | undefined): string[] {
@@ -77,56 +78,8 @@ export default function MapView() {
     }, 0);
   }
 
-  const [addDepotMode, setAddDepotMode] = useState(false);
-  // State for nytt depot
-  const [newDepot, setNewDepot] = useState<Partial<Pin>>({
-    name: "",
-    type: "fueldepot",
-    lat: 0,
-    lng: 0,
-  });
+  const { addDepotMode, startAddDepot, handleMapClick, handleManualEdit: addDepotManualEdit } = useAddDepot(pins, setPins);
 
-  // Når plusstegnet trykkes
-  function handleAddDepotClick() {
-    setAddDepotMode(true);
-    setNewDepot({ name: "", type: "fueldepot", lat: 0, lng: 0 });
-  }
-
-  // Når brukeren klikker på kartet i addDepotMode
-  function handleMapClickForAddDepot(e: google.maps.MapMouseEvent) {
-    if (!addDepotMode || !e.latLng) return;
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    setNewDepot(nd => ({ ...nd, lat, lng }));
-    setAddDepotMode(false);
-    setShowNewDepotPopup(true);
-  }
-
-  // State for å vise popup etter kartklikk
-  const [showNewDepotPopup, setShowNewDepotPopup] = useState(false);
-
-  // Når depot lagres fra popup
-  function handleSaveNewDepot() {
-    const depot: Pin = {
-      id: "new",
-      lat: newDepot.lat!,
-      lng: newDepot.lng!,
-      type: newDepot.type as Pin['type'],
-      name: newDepot.name || "",
-      note: "",
-      fullBarrels: 0,
-      emptyBarrels: 0,
-      tank: 0,
-      trailer: 0,
-      equipment: [],
-      images: [],
-      createdAt: Date.now(),
-    };
-    setSelected(depot);
-    setEditMode(true);
-    setEditValues(depot);
-    setShowNewDepotPopup(false);
-  }
   if (!isLoaded) return <p className="text-black font-bold text-xl">Laster kart...</p>;
 
   const markers = pins.map((pin) => {
@@ -185,6 +138,9 @@ export default function MapView() {
     setEditMode(true);
     setEditValues({ ...pin });
   }
+  function handleManualEdit(pin: Pin) {
+    addDepotManualEdit(pin, setSelected, setEditMode, setEditValues);
+  }
   function minusOneFromFull(pin: Pin) {
     if ((pin.fullBarrels ?? 0) > 0) {
       setEditValues({
@@ -219,48 +175,8 @@ export default function MapView() {
         dropdownOpen={dropdownOpen}
         setDropdownOpen={setDropdownOpen}
         flyTo={flyTo}
-        onAddDepot={handleAddDepotClick}
+        onAddDepot={startAddDepot}
       />
-      {/* Popup for nytt depot etter kartklikk */}
-      {showNewDepotPopup && (
-        <div style={{ position: 'absolute', left: '50%', top: '20%', transform: 'translate(-50%, 0)', zIndex: 100, background: 'white', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', padding: 24, minWidth: 320, maxWidth: 400 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>Opprett nytt depot</h2>
-          <label style={{ fontWeight: 500 }}>Navn</label>
-          <input
-            type="text"
-            value={newDepot.name}
-            onChange={e => setNewDepot({ ...newDepot, name: e.target.value })}
-            style={{ border: '1.5px solid #ccc', borderRadius: 6, padding: '8px 12px', fontSize: 18, width: '100%', marginBottom: 12 }}
-            placeholder="Navn på depotet"
-            autoFocus
-          />
-          <label style={{ fontWeight: 500 }}>Type</label>
-          <select
-            value={newDepot.type}
-            onChange={e => setNewDepot({ ...newDepot, type: e.target.value as Pin['type'] })}
-            style={{ border: '1.5px solid #ccc', borderRadius: 6, padding: '8px 12px', fontSize: 18, width: '100%', marginBottom: 12 }}
-          >
-            <option value="fueldepot">Fueldepot</option>
-            <option value="base">Base</option>
-            <option value="helipad">Helipad</option>
-          </select>
-          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-            <button
-              style={{ background: '#38a169', color: 'white', padding: '8px 24px', borderRadius: 6, border: 'none', fontWeight: 'bold', fontSize: 18 }}
-              onClick={handleSaveNewDepot}
-              disabled={!newDepot.name}
-            >
-              Lagre
-            </button>
-            <button
-              style={{ background: '#a0aec0', color: 'white', padding: '8px 24px', borderRadius: 6, border: 'none', fontWeight: 'bold', fontSize: 18 }}
-              onClick={() => setShowNewDepotPopup(false)}
-            >
-              Avbryt
-            </button>
-          </div>
-        </div>
-      )}
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
@@ -272,16 +188,7 @@ export default function MapView() {
         onZoomChanged={() => {
           if (mapRef.current) setZoom(mapRef.current.getZoom() ?? zoom);
         }}
-        onClick={e => {
-          if (addDepotMode) {
-            handleMapClickForAddDepot(e);
-          } else {
-            // Lukk alle popups hvis bruker klikker på kartet
-            setShowNewDepotPopup(false);
-            setSelected(null);
-            setEditMode(false);
-          }
-        }}
+        onClick={(e) => handleMapClick(e, setSelected, setEditMode, setEditValues)}
       >
         {markers}
         {selected && (
@@ -296,6 +203,7 @@ export default function MapView() {
             showEquip={showEquip}
             showNote={showNote}
             startEdit={startEdit}
+            handleManualEdit={handleManualEdit}
             minusOneFromFull={minusOneFromFull}
             addEquipment={addEquipment}
             removeEquipment={removeEquipment}
