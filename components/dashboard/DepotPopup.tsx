@@ -42,7 +42,6 @@ interface DepotPopupProps {
 
 export default function DepotPopup(props: DepotPopupProps) {
   const { selected, editMode, editValues, setEditMode, setEditValues, setSelected, deletePin, showDeleteConfirm, setShowDeleteConfirm } = props;
-  const [showAllEquipment, setShowAllEquipment] = React.useState(false);
   const [showEquipmentPopup, setShowEquipmentPopup] = React.useState(false);
   const [equipmentInputs, setEquipmentInputs] = React.useState(editValues.equipment ? [...editValues.equipment] : selected.equipment ? [...selected.equipment] : []);
 
@@ -283,6 +282,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           )}
         </div>
       </div>
+      </InfoWindowF>
       {showEquipmentPopup && (
         <EquipmentPopup
           equipment={equipmentInputs}

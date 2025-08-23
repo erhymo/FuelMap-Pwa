@@ -87,7 +87,7 @@ export default function AdminPage() {
       setNewPin("");
       setError("");
       await addLog(`La til ansatt: ${newName}`, currentEmployee?.id, currentEmployee?.name);
-    } catch (e) {
+    } catch {
       setError("Kunne ikke legge til ansatt.");
     }
   }
@@ -98,7 +98,7 @@ export default function AdminPage() {
       await deleteDoc(doc(db, "employees", id));
       await addLog(`Slettet ansatt: ${name}`, currentEmployee?.id, currentEmployee?.name);
       setError("");
-    } catch (e) {
+    } catch {
       setError("Kunne ikke slette ansatt.");
     }
   }
