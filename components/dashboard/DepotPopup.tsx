@@ -54,7 +54,7 @@ export default function DepotPopup(props: DepotPopupProps) {
     <InfoWindowF
       position={{ lat: selected.lat, lng: selected.lng }}
       onCloseClick={() => setSelected(null)}
-      options={{ maxWidth: 520 }}
+      options={{ maxWidth: 520, pixelOffset: new window.google.maps.Size(0, -40) }}
     >
       <div
         style={{
@@ -65,6 +65,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           minWidth: 'min(98vw, 340px)',
           maxWidth: 'min(98vw, 520px)',
           width: '100%',
+          maxHeight: 'calc(100vh - 32px)',
           boxSizing: 'border-box',
           overflow: 'hidden',
           display: 'flex',
@@ -72,6 +73,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           alignItems: 'center',
         }}
       >
+        <div style={{ width: '100%', maxHeight: 'calc(100vh - 80px)', overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Depot name, centered (always visible) */}
         <div style={{ width: '100%', textAlign: 'center', marginBottom: 12 }}>
           <span style={{ fontSize: 28, fontWeight: 'bold', color: '#222' }}>{editMode ? (editValues.name ?? selected.name) : selected.name}</span>
@@ -264,8 +266,15 @@ export default function DepotPopup(props: DepotPopupProps) {
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tomme:</b> <span style={{ color: '#444' }}>{selected.emptyBarrels}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tank:</b> <span style={{ color: '#444' }}>{selected.tank}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Fuelhenger:</b> <span style={{ color: '#444' }}>{selected.trailer}</span></p>
-            <div style={{ margin: '4px 0', width: '100%' }}>
-              <b style={{ color: '#222', fontSize: 16 }}>Utstyr:</b>
+            {/* Utstyr direkte etter Fuelhenger */}
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', minHeight: 24 }}>
+              <b
+                style={{
+                  color: '#222',
+                  fontSize: 16,
+                  marginLeft: typeof window !== 'undefined' && window.innerWidth < 600 ? 32 : 110
+                }}
+              >Utstyr:</b>
               {(selected.equipment && selected.equipment.length > 0) ? (
                 <>
                   {(showAllEquipment ? selected.equipment : selected.equipment.slice(0, 3)).map((eq, idx) => (
@@ -282,10 +291,10 @@ export default function DepotPopup(props: DepotPopupProps) {
                   )}
                 </>
               ) : (
-                <span style={{ color: '#444', fontSize: 16, marginLeft: 8 }}>Ingen</span>
+                <span style={{ color: '#444', fontSize: 16, marginLeft: 8, minWidth: 60, textAlign: 'left', display: 'inline-block' }}>Ingen</span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               <button
                 style={{ background: '#3182ce', color: 'white', padding: '8px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 18 }}
                 onClick={() => setEditMode(true)}
@@ -296,6 +305,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           </>
         )}
       </div>
+    </div>
     </InfoWindowF>
   );
 }
