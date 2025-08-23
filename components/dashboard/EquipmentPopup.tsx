@@ -28,6 +28,9 @@ export default function EquipmentPopup({ equipment, onSave, onClose }: Equipment
     onClose();
   };
 
+  // Sjekk om mobil (bredde < 600)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
+
   return (
     <div style={{
       position: "fixed",
@@ -36,19 +39,20 @@ export default function EquipmentPopup({ equipment, onSave, onClose }: Equipment
       width: "100vw",
       height: "100vh",
       background: "rgba(0,0,0,0.18)",
-      zIndex: 100000,
+      zIndex: 999999,
       display: "flex",
-      alignItems: "center",
+      alignItems: isMobile ? "flex-end" : "center",
       justifyContent: "center"
     }}>
       <div style={{
         background: "white",
-        borderRadius: 12,
-        boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-        padding: 24,
-        minWidth: 280,
-        maxWidth: 340,
-        width: "100%",
+        borderRadius: isMobile ? "24px 24px 0 0" : 12,
+        boxShadow: "0 4px 32px rgba(0,0,0,0.22)",
+        padding: isMobile ? 16 : 24,
+        minWidth: isMobile ? '100vw' : 280,
+        maxWidth: isMobile ? '100vw' : 340,
+        width: isMobile ? '100vw' : '100%',
+        maxHeight: isMobile ? '60vh' : undefined,
         display: "flex",
         flexDirection: "column",
         alignItems: "center"
@@ -60,7 +64,7 @@ export default function EquipmentPopup({ equipment, onSave, onClose }: Equipment
               type="text"
               value={eq}
               onChange={e => handleChange(idx, e.target.value)}
-              style={{ flex: 1, fontSize: 18, borderRadius: 6, border: "1.5px solid #ccc", padding: "8px 12px", marginRight: 8 }}
+              style={{ flex: 1, fontSize: 18, borderRadius: 6, border: "1.5px solid #ccc", padding: isMobile ? "8px 8px" : "8px 12px", marginRight: 8 }}
             />
             <button
               type="button"
