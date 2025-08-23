@@ -56,7 +56,7 @@ export default function DepotPopup(props: DepotPopupProps) {
       onCloseClick={() => setSelected(null)}
       options={{
         maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 420 : 520,
-        pixelOffset: new window.google.maps.Size(0, -40)
+        pixelOffset: new window.google.maps.Size(0, typeof window !== 'undefined' && window.innerWidth < 600 ? 40 : 80)
       }}
     >
       <div
@@ -76,6 +76,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           alignItems: 'center',
           fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 12 : undefined,
           zIndex: 99999,
+          marginTop: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 32,
         }}
       >
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
