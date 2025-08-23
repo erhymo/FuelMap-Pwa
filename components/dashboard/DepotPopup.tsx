@@ -75,7 +75,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           flexDirection: 'column',
           alignItems: 'center',
           fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 12 : undefined,
-          zIndex: 9999,
+          zIndex: 99999,
         }}
       >
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -137,7 +137,7 @@ export default function DepotPopup(props: DepotPopupProps) {
                 <span style={{ fontSize: 28, fontWeight: 'bold', color: '#222', marginRight: 18, minWidth: 90 }}>Fulle</span>
                 <input
                   type="number"
-                  value={editValues.fullBarrels ?? selected.fullBarrels}
+                  value={(editValues.fullBarrels ?? selected.fullBarrels) === 0 ? '' : (editValues.fullBarrels ?? selected.fullBarrels)}
                   onChange={e => setEditValues({ ...editValues, fullBarrels: Number(e.target.value) })}
                   style={{ width: 80, fontSize: 26, textAlign: 'center', marginRight: 12, background: '#fff', color: '#222', border: '1.5px solid #ccc', borderRadius: 6, height: 48 }}
                 />
@@ -164,7 +164,7 @@ export default function DepotPopup(props: DepotPopupProps) {
                 <span style={{ fontSize: 28, fontWeight: 'bold', color: '#222', marginRight: 18, minWidth: 90 }}>Tomme</span>
                 <input
                   type="number"
-                  value={editValues.emptyBarrels ?? selected.emptyBarrels}
+                  value={(editValues.emptyBarrels ?? selected.emptyBarrels) === 0 ? '' : (editValues.emptyBarrels ?? selected.emptyBarrels)}
                   onChange={e => setEditValues({ ...editValues, emptyBarrels: Number(e.target.value) })}
                   style={{ width: 80, fontSize: 26, textAlign: 'center', marginRight: 12, background: '#fff', color: '#222', border: '1.5px solid #ccc', borderRadius: 6, height: 48 }}
                 />
@@ -176,7 +176,7 @@ export default function DepotPopup(props: DepotPopupProps) {
               <input
                 type="number"
                 maxLength={5}
-                value={editValues.tank ?? selected.tank}
+                value={(editValues.tank ?? selected.tank) === 0 ? '' : (editValues.tank ?? selected.tank)}
                 onChange={e => setEditValues({ ...editValues, tank: Number(e.target.value) })}
                 placeholder=""
                 style={{ width: 80, fontSize: 22, textAlign: 'center', background: '#fff', color: '#222', border: '1.5px solid #ccc', borderRadius: 6, height: 40 }}
@@ -189,7 +189,7 @@ export default function DepotPopup(props: DepotPopupProps) {
               <input
                 type="number"
                 maxLength={5}
-                value={editValues.trailer ?? selected.trailer}
+                value={(editValues.trailer ?? selected.trailer) === 0 ? '' : (editValues.trailer ?? selected.trailer)}
                 onChange={e => setEditValues({ ...editValues, trailer: Number(e.target.value) })}
                 placeholder=""
                 style={{ width: 80, fontSize: 22, textAlign: 'center', background: '#fff', color: '#222', border: '1.5px solid #ccc', borderRadius: 6, height: 40 }}
@@ -272,32 +272,28 @@ export default function DepotPopup(props: DepotPopupProps) {
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tank:</b> <span style={{ color: '#444' }}>{selected.tank}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Fuelhenger:</b> <span style={{ color: '#444' }}>{selected.trailer}</span></p>
             {/* Utstyr direkte etter Fuelhenger */}
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', minHeight: 24 }}>
-              <b
-                style={{
-                  color: '#222',
-                  fontSize: 16,
-                  marginLeft: typeof window !== 'undefined' && window.innerWidth < 600 ? 110 : 110
-                }}
-              >Utstyr:</b>
-              {(selected.equipment && selected.equipment.length > 0) ? (
-                <>
-                  {(showAllEquipment ? selected.equipment : selected.equipment.slice(0, 3)).map((eq, idx) => (
-                    <div key={idx} style={{ color: '#444', fontSize: 16, margin: '2px 0', textAlign: 'left' }}>{eq}</div>
-                  ))}
-                  {selected.equipment.length > 3 && (
-                    <button
-                      type="button"
-                      style={{ background: '#3182ce', color: 'white', fontSize: 14, borderRadius: 4, border: 'none', padding: '2px 8px', marginTop: 2 }}
-                      onClick={() => setShowAllEquipment(v => !v)}
-                    >
-                      {showAllEquipment ? 'Vis mindre' : `Vis alle (${selected.equipment.length})`}
-                    </button>
-                  )}
-                </>
-              ) : (
-                <span style={{ color: '#444', fontSize: 16, marginLeft: 8, minWidth: 60, textAlign: 'left', display: 'inline-block' }}>Ingen</span>
-              )}
+            <div style={{ width: '100%', textAlign: 'center', margin: '12px 0 0 0', padding: '8px 0', background: '#f7fafc', borderRadius: 8 }}>
+              <b style={{ color: '#222', fontSize: 17 }}>Utstyr</b>
+              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                {(selected.equipment && selected.equipment.length > 0) ? (
+                  <>
+                    {(showAllEquipment ? selected.equipment : selected.equipment.slice(0, 3)).map((eq, idx) => (
+                      <div key={idx} style={{ color: '#444', fontSize: 16, margin: '2px 0', textAlign: 'center', background: '#edf2f7', borderRadius: 4, padding: '2px 8px', minWidth: 80 }}>{eq}</div>
+                    ))}
+                    {selected.equipment.length > 3 && (
+                      <button
+                        type="button"
+                        style={{ background: '#3182ce', color: 'white', fontSize: 13, borderRadius: 4, border: 'none', padding: '2px 8px', marginTop: 2 }}
+                        onClick={() => setShowAllEquipment(v => !v)}
+                      >
+                        {showAllEquipment ? 'Vis mindre' : `Vis alle (${selected.equipment.length})`}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span style={{ color: '#888', fontSize: 15, textAlign: 'center', display: 'inline-block', marginTop: 2 }}>Ingen</span>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
