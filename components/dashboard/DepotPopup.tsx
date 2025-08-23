@@ -120,18 +120,7 @@ export default function DepotPopup(props: DepotPopupProps) {
                 setEditValues({});
               }}
             >
-              {/* Typevalg dropdown (mer moderne og kompakt) */}
-              <div style={{ width: '100%', marginBottom: 12, textAlign: 'center' }}>
-                <select
-                  value={editValues.type ?? selected.type}
-                  onChange={e => setEditValues({ ...editValues, type: e.target.value as Pin['type'] })}
-                  style={{ fontSize: 16, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #cbd5e1', background: '#f7fafc', color: '#222', minWidth: 120, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-                >
-                  <option value="fueldepot">Fueldepot</option>
-                  <option value="base">Base</option>
-                  <option value="helipad">Helipad</option>
-                </select>
-              </div>
+              {/* Fjerner type/base-valg for bedre plass */}
               {/* Fulle */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18, width: '100%' }}>
                 {/* Fulle */}
