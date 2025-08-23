@@ -57,14 +57,14 @@ export default function EquipmentPopup({ equipment, onSave, onClose }: Equipment
         flexDirection: "column",
         alignItems: "center"
       }}>
-        <div style={{ fontWeight: "bold", fontSize: 22, marginBottom: 12 }}>Legg til utstyr</div>
+        <div style={{ fontWeight: "bold", fontSize: 24, marginBottom: 16, color: "#222", textShadow: "0 1px 4px #fff, 0 0 2px #222" }}>Legg til utstyr</div>
         {inputs.map((eq, idx) => (
           <div key={idx} style={{ display: "flex", alignItems: "center", width: "100%", marginBottom: 8 }}>
             <input
               type="text"
               value={eq}
               onChange={e => handleChange(idx, e.target.value)}
-              style={{ flex: 1, fontSize: 18, borderRadius: 6, border: "1.5px solid #ccc", padding: isMobile ? "8px 8px" : "8px 12px", marginRight: 8 }}
+              style={{ flex: 1, fontSize: 20, fontWeight: "bold", color: "#222", background: "#fff", borderRadius: 6, border: "2px solid #222", padding: "10px 14px", marginRight: 8, boxShadow: "0 1px 4px #eee" }}
             />
             <button
               type="button"
