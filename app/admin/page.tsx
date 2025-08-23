@@ -193,17 +193,28 @@ export default function AdminPage() {
       {/* Logg-fanen */}
       {tab === 'logg' && (
         <section>
-          <h2 className="text-xl font-semibold mb-2">Logg</h2>
-          <ul className="space-y-1">
-            {logs.map((log) => (
-              <li
+          <h2 className="text-xl font-semibold mb-4">Logg</h2>
+          <div className="flex flex-col gap-3">
+            {[...logs]
+              .sort((a, b) => {
+                const ta = a.timestamp?.seconds ?? 0;
+                const tb = b.timestamp?.seconds ?? 0;
+                return tb - ta;
+              })
+              .map((log) => (
+              <div
                 key={log.id}
-                className="text-sm border-b py-1"
+                className="bg-gray-900 rounded-lg px-4 py-3 flex flex-col border border-gray-700 shadow"
+                style={{ minHeight: 48 }}
               >
-                <span className="font-medium">{log.user}</span>: {log.action} <span className="text-gray-500">({log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"})</span>
-              </li>
+                <div className="flex flex-row items-center gap-2 mb-1">
+                  <span className="font-bold text-blue-300 text-base">{log.user || 'System'}</span>
+                  <span className="text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"}</span>
+                </div>
+                <div className="text-white text-sm" style={{ wordBreak: 'break-word' }}>{log.action}</div>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
