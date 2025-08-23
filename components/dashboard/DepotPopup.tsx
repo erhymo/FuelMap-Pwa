@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import EquipmentPopup from "./EquipmentPopup";
 import { InfoWindowF } from "@react-google-maps/api";
 
 
@@ -42,7 +43,8 @@ interface DepotPopupProps {
 export default function DepotPopup(props: DepotPopupProps) {
   const { selected, editMode, editValues, setEditMode, setEditValues, setSelected, deletePin, showDeleteConfirm, setShowDeleteConfirm } = props;
   const [showAllEquipment, setShowAllEquipment] = React.useState(false);
-  const [equipmentInputs, setEquipmentInputs] = React.useState(editValues.equipment ? editValues.equipment.map(e => e) : selected.equipment ? selected.equipment.map(e => e) : []);
+  const [showEquipmentPopup, setShowEquipmentPopup] = React.useState(false);
+  const [equipmentInputs, setEquipmentInputs] = React.useState(editValues.equipment ? [...editValues.equipment] : selected.equipment ? [...selected.equipment] : []);
 
   React.useEffect(() => {
     if (editMode) {
@@ -196,31 +198,16 @@ export default function DepotPopup(props: DepotPopupProps) {
               />
               <span style={{ fontSize: 18, color: '#222', marginLeft: 8 }}>Liter</span>
             </div>
-            {/* Utstyr */}
+            {/* Utstyr kun tekst og plusstegn */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', marginBottom: 18, width: '100%' }}>
               <span style={{ fontSize: 20, fontWeight: 'bold', color: '#222', marginRight: 12 }}>Utstyr</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-                {equipmentInputs.map((eq, idx) => (
-                  <input
-                    key={idx}
-                    type="text"
-                    value={eq}
-                    onChange={e => {
-                      const newInputs = [...equipmentInputs];
-                      newInputs[idx] = e.target.value;
-                      setEquipmentInputs(newInputs);
-                    }}
-                    style={{ width: '100%', fontSize: 18, textAlign: 'left', background: '#fff', color: '#222', border: '1.5px solid #ccc', borderRadius: 6, height: 40, marginBottom: 2 }}
-                  />
-                ))}
-                <button
-                  type="button"
-                  style={{ background: '#38a169', color: 'white', fontSize: 24, fontWeight: 'bold', borderRadius: 6, border: 'none', width: 40, height: 40, marginTop: 4, alignSelf: 'flex-start', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  onClick={() => setEquipmentInputs([...equipmentInputs, ""])}
-                >
-                  +
-                </button>
-              </div>
+              <button
+                type="button"
+                style={{ background: '#38a169', color: 'white', fontSize: 24, fontWeight: 'bold', borderRadius: 6, border: 'none', width: 40, height: 40, marginLeft: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => setShowEquipmentPopup(true)}
+              >
+                +
+              </button>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
               <button
@@ -263,6 +250,14 @@ export default function DepotPopup(props: DepotPopupProps) {
           </div>
         )}
             </div>
+            {/* EquipmentPopup vises når showEquipmentPopup er true */}
+            {showEquipmentPopup && (
+              <EquipmentPopup
+                equipment={equipmentInputs}
+                onSave={eqs => setEquipmentInputs(eqs)}
+                onClose={() => setShowEquipmentPopup(false)}
+              />
+            )}
           </form>
         ) : (
           <>
@@ -270,25 +265,14 @@ export default function DepotPopup(props: DepotPopupProps) {
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tomme:</b> <span style={{ color: '#444' }}>{selected.emptyBarrels}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tank:</b> <span style={{ color: '#444' }}>{selected.tank}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Fuelhenger:</b> <span style={{ color: '#444' }}>{selected.trailer}</span></p>
-            {/* Utstyr direkte etter Fuelhenger */}
+            {/* Utstyr vises kun i info-popupen, ikke i redigerings-popupen */}
             <div style={{ width: '100%', textAlign: 'center', margin: '12px 0 0 0', padding: '8px 0', background: '#f7fafc', borderRadius: 8 }}>
               <b style={{ color: '#222', fontSize: 17 }}>Utstyr</b>
               <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                 {(selected.equipment && selected.equipment.length > 0) ? (
-                  <>
-                    {(showAllEquipment ? selected.equipment : selected.equipment.slice(0, 3)).map((eq, idx) => (
-                      <div key={idx} style={{ color: '#444', fontSize: 16, margin: '2px 0', textAlign: 'center', background: '#edf2f7', borderRadius: 4, padding: '2px 8px', minWidth: 80 }}>{eq}</div>
-                    ))}
-                    {selected.equipment.length > 3 && (
-                      <button
-                        type="button"
-                        style={{ background: '#3182ce', color: 'white', fontSize: 13, borderRadius: 4, border: 'none', padding: '2px 8px', marginTop: 2 }}
-                        onClick={() => setShowAllEquipment(v => !v)}
-                      >
-                        {showAllEquipment ? 'Vis mindre' : `Vis alle (${selected.equipment.length})`}
-                      </button>
-                    )}
-                  </>
+                  selected.equipment.map((eq, idx) => (
+                    <div key={idx} style={{ color: '#444', fontSize: 16, margin: '2px 0', textAlign: 'center', background: '#edf2f7', borderRadius: 4, padding: '2px 8px', minWidth: 80 }}>{eq}</div>
+                  ))
                 ) : (
                   <span style={{ color: '#888', fontSize: 15, textAlign: 'center', display: 'inline-block', marginTop: 2 }}>Ingen</span>
                 )}
