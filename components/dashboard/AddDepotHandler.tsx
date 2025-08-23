@@ -23,15 +23,14 @@ export function useAddDepot(pins: Pin[], setPins: (pins: Pin[]) => void) {
         tank: 0,
         trailer: 0,
         equipment: [],
-        images: [],
-        createdAt: Date.now(),
-        editing: true,
+      images: [],
+      createdAt: Date.now(),
       });
       setEditMode(true);
       setEditValues({ name: "", type: "base" });
       setAddDepotMode(false);
     } else {
-      setSelected(null);
+  setSelected(undefined);
     }
   }
 
@@ -54,7 +53,21 @@ export function useAddDepot(pins: Pin[], setPins: (pins: Pin[]) => void) {
         ...pins,
         { ...pin, id: docRef.id },
       ]);
-      setSelected(null);
+      setSelected({
+        id: "",
+        lat: 0,
+        lng: 0,
+        name: "",
+        type: "base",
+        note: "",
+        fullBarrels: 0,
+        emptyBarrels: 0,
+        tank: 0,
+        trailer: 0,
+        equipment: [],
+        images: [],
+        createdAt: Date.now(),
+      });
       setEditMode(false);
       setEditValues({});
     } else {
