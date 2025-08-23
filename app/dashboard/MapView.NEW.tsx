@@ -78,7 +78,7 @@ export default function MapView() {
     }, 0);
   }
 
-  const { addDepotMode, startAddDepot, handleMapClick, handleManualEdit: addDepotManualEdit } = useAddDepot(pins, setPins);
+  const { addDepotMode, startAddDepot, handleMapClick } = useAddDepot(pins, setPins);
 
   if (!isLoaded) return <p className="text-black font-bold text-xl">Laster kart...</p>;
 
@@ -137,9 +137,6 @@ export default function MapView() {
   function startEdit(pin: Pin) {
     setEditMode(true);
     setEditValues({ ...pin });
-  }
-  function handleManualEdit(pin: Pin) {
-    addDepotManualEdit(pin, setSelected, setEditMode, setEditValues);
   }
   function minusOneFromFull(pin: Pin) {
     if ((pin.fullBarrels ?? 0) > 0) {
@@ -203,7 +200,6 @@ export default function MapView() {
             showEquip={showEquip}
             showNote={showNote}
             startEdit={startEdit}
-            handleManualEdit={handleManualEdit}
             minusOneFromFull={minusOneFromFull}
             addEquipment={addEquipment}
             removeEquipment={removeEquipment}
