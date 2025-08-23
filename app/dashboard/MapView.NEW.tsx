@@ -78,7 +78,7 @@ export default function MapView() {
     }, 0);
   }
 
-  const { addDepotMode, startAddDepot, handleMapClick } = useAddDepot(pins, setPins);
+  const { startAddDepot, handleMapClick } = useAddDepot(pins, setPins);
 
   if (!isLoaded) return <p className="text-black font-bold text-xl">Laster kart...</p>;
 

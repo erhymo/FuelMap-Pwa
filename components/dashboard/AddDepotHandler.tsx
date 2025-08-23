@@ -10,7 +10,7 @@ export function useAddDepot(pins: Pin[], setPins: (pins: Pin[]) => void) {
     setAddDepotMode(true);
   }
 
-  function handleMapClick(e: google.maps.MapMouseEvent, setSelected: (pin: Pin) => void, setEditMode: (v: boolean) => void, setEditValues: (v: Partial<Pin>) => void) {
+  function handleMapClick(e: google.maps.MapMouseEvent, setSelected: (pin: Pin | null) => void, setEditMode: (v: boolean) => void, setEditValues: (v: Partial<Pin>) => void) {
     if (addDepotMode && e.latLng) {
       setSelected({
         id: "ny",
@@ -30,7 +30,7 @@ export function useAddDepot(pins: Pin[], setPins: (pins: Pin[]) => void) {
       setEditValues({ name: "", type: "base" });
       setAddDepotMode(false);
     } else {
-  setSelected(undefined);
+  setSelected(null);
     }
   }
 

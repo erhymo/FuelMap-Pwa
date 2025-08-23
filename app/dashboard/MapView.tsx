@@ -131,6 +131,17 @@ export default function MapView() {
 
   const markers = pins.map((pin) => {
     const size = sizeForZoom(zoom);
+    // zIndex: selected > helipad > base > fueldepot
+    let zIndex = 1;
+    if (selected && selected.id === pin.id) {
+      zIndex = 100;
+    } else if (pin.type === "helipad") {
+      zIndex = 30;
+    } else if (pin.type === "base") {
+      zIndex = 20;
+    } else if (pin.type === "fueldepot") {
+      zIndex = 10;
+    }
     if (pin.type === "helipad") {
       return (
         <MarkerF
@@ -150,6 +161,7 @@ export default function MapView() {
             scaledSize: new window.google.maps.Size(size, size),
             anchor: new window.google.maps.Point(Math.floor(size/2), Math.floor(size/2)),
           }}
+          zIndex={zIndex}
         />
       );
     }
@@ -177,6 +189,7 @@ export default function MapView() {
                 : "",
           scaledSize: new window.google.maps.Size(size, size),
         }}
+        zIndex={zIndex}
       />
     );
   });
@@ -207,9 +220,20 @@ export default function MapView() {
     });
   }
   function deletePin() {
-    setSelected(null);
-    setEditMode(false);
-    setEditValues({});
+    if (selected && selected.id) {
+      import("firebase/firestore").then(async ({ doc, deleteDoc }) => {
+        const { db } = await import("@/lib/firebase");
+        await deleteDoc(doc(db, "pins", selected.id));
+        setPins(pins => pins.filter(p => p.id !== selected.id));
+        setSelected(null);
+        setEditMode(false);
+        setEditValues({});
+      });
+    } else {
+      setSelected(null);
+      setEditMode(false);
+      setEditValues({});
+    }
   }
 
   return (
@@ -223,7 +247,7 @@ export default function MapView() {
       />
       {/* Popup for nytt depot etter kartklikk */}
       {showNewDepotPopup && (
-        <div style={{ position: 'absolute', left: '50%', top: '20%', transform: 'translate(-50%, 0)', zIndex: 100, background: 'white', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', padding: 24, minWidth: 320, maxWidth: 400 }}>
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 100, background: 'white', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', padding: 24, minWidth: 320, maxWidth: 400 }}>
           <h2 style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>Opprett nytt depot</h2>
           <label style={{ fontWeight: 500 }}>Navn</label>
           <input

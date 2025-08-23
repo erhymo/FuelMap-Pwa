@@ -43,7 +43,7 @@ export default function Login({ onLogin }: LoginProps) {
           height={128}
           className="mb-4 w-32 h-32 object-contain"
         />
-        <img src="/Airlift-logo.png" alt="Airlift logo" className="mb-4 w-32 h-32 object-contain" />
+  <Image src="/Airlift-logo.png" alt="Airlift logo" width={128} height={128} className="mb-4 w-32 h-32 object-contain" />
   <h1 className="text-2xl font-extrabold mb-4 text-gray-900 text-center">Logg inn</h1>
         <input
           type="password"
