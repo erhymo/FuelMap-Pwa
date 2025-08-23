@@ -21,8 +21,9 @@ type Employee = {
 
 type LogEntry = {
   id: string;
-  user: string;
+  user?: string;
   action: string;
+  employeeName?: string;
   timestamp?: { seconds: number; nanoseconds: number };
 };
 
@@ -35,6 +36,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [tab, setTab] = useState<'ansatte' | 'logg' | 'database'>('ansatte');
   const [error, setError] = useState<string>("");
+  const [currentEmployee, setCurrentEmployee] = useState<{id: string, name: string} | null>(null);
 
   // Hent ansatte fra Firestore
   useEffect(() => {
@@ -58,9 +60,18 @@ export default function AdminPage() {
   function handleLogin() {
     if (password === "Bringeland") {
       setIsLoggedIn(true);
+      setCurrentEmployee({ id: "admin", name: "Admin" });
       setError("");
     } else {
-      setError("Feil passord. Prøv igjen.");
+      // Sjekk om det er en ansatt med denne PIN
+      const found = employees.find(e => e.pin === password);
+      if (found) {
+        setIsLoggedIn(true);
+        setCurrentEmployee({ id: found.id, name: found.name });
+        setError("");
+      } else {
+        setError("Feil passord eller PIN. Prøv igjen.");
+      }
     }
   }
 
@@ -75,7 +86,7 @@ export default function AdminPage() {
       setNewName("");
       setNewPin("");
       setError("");
-      await addLog("admin", `La til ansatt: ${newName}`);
+      await addLog(`La til ansatt: ${newName}`, currentEmployee?.id, currentEmployee?.name);
     } catch (e) {
       setError("Kunne ikke legge til ansatt.");
     }
@@ -85,7 +96,7 @@ export default function AdminPage() {
   async function handleDeleteEmployee(id: string, name: string) {
     try {
       await deleteDoc(doc(db, "employees", id));
-      await addLog("admin", `Slettet ansatt: ${name}`);
+      await addLog(`Slettet ansatt: ${name}`, currentEmployee?.id, currentEmployee?.name);
       setError("");
     } catch (e) {
       setError("Kunne ikke slette ansatt.");
@@ -208,7 +219,7 @@ export default function AdminPage() {
                 style={{ minHeight: 48 }}
               >
                 <div className="flex flex-row items-center gap-2 mb-1">
-                  <span className="font-bold text-blue-300 text-base">{log.user || 'System'}</span>
+                  <span className="font-bold text-blue-300 text-base">{log.employeeName || 'System'}</span>
                   <span className="text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"}</span>
                 </div>
                 <div className="text-white text-sm" style={{ wordBreak: 'break-word' }}>{log.action}</div>

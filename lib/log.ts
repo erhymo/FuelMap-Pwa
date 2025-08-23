@@ -2,11 +2,12 @@
 import { db } from "./firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
-export async function addLog(message: string, employeeId?: string) {
+export async function addLog(action: string, employeeId?: string, employeeName?: string) {
   try {
     await addDoc(collection(db, "logs"), {
-      message,
+      action,
       employeeId: employeeId || null,
+      employeeName: employeeName || null,
       timestamp: serverTimestamp(),
     });
   } catch (err) {

@@ -55,29 +55,30 @@ export default function DepotPopup(props: DepotPopupProps) {
       position={{ lat: selected.lat, lng: selected.lng }}
       onCloseClick={() => setSelected(null)}
       options={{
-        maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 380 : 520,
+        maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 420 : 520,
         pixelOffset: new window.google.maps.Size(0, -40)
       }}
     >
       <div
         style={{
-          padding: typeof window !== 'undefined' && window.innerWidth < 600 ? 4 : 16,
+          padding: typeof window !== 'undefined' && window.innerWidth < 600 ? 2 : 12,
           background: 'white',
           borderRadius: 12,
           boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-          minWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 220px)' : 'min(98vw, 340px)',
-          maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 380px)' : 'min(98vw, 520px)',
+          minWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 180px)' : 'min(98vw, 320px)',
+          maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 340px)' : 'min(98vw, 480px)',
           width: '100%',
-          maxHeight: 'calc(100vh - 32px)',
+          maxHeight: typeof window !== 'undefined' && window.innerWidth < 600 ? 'none' : 'calc(100vh - 32px)',
           boxSizing: 'border-box',
-          overflow: 'hidden',
+          overflow: 'visible',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 12 : undefined,
+          zIndex: 9999,
         }}
       >
-        <div style={{ width: '100%', maxHeight: 'calc(100vh - 80px)', overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Depot name, centered (always visible) */}
         <div style={{ width: '100%', textAlign: 'center', marginBottom: 12 }}>
           <span style={{ fontSize: 28, fontWeight: 'bold', color: '#222' }}>{editMode ? (editValues.name ?? selected.name) : selected.name}</span>
