@@ -35,12 +35,13 @@ interface DepotPopupProps {
   addEquipment: () => void;
   removeEquipment: (idx: number) => void;
   setShowDeleteConfirm: (v: boolean) => void;
+  showDeleteConfirm: boolean;
   setSelected: (v: Pin | null) => void;
   deletePin: (pin: Pin) => void;
 }
 
 export default function DepotPopup(props: DepotPopupProps) {
-  const { selected, editMode, editValues, setEditMode, setEditValues, setSelected, deletePin } = props;
+  const { selected, editMode, editValues, setEditMode, setEditValues, setSelected, deletePin, handleManualEdit, showDeleteConfirm, setShowDeleteConfirm } = props;
   const [showAllEquipment, setShowAllEquipment] = React.useState(false);
   const [equipmentInputs, setEquipmentInputs] = React.useState(editValues.equipment ? editValues.equipment.map(e => e) : selected.equipment ? selected.equipment.map(e => e) : []);
 
@@ -80,13 +81,13 @@ export default function DepotPopup(props: DepotPopupProps) {
           <form
             onSubmit={e => {
               e.preventDefault();
-              setEditValues({
+              const newValues = {
                 ...editValues,
                 equipment: equipmentInputs.filter(e => e.trim() !== ""),
                 tank: editValues.tank !== undefined ? Number(editValues.tank) : selected.tank,
                 trailer: editValues.trailer !== undefined ? Number(editValues.trailer) : selected.trailer,
-              });
-              setEditMode(false);
+              };
+              handleManualEdit({ ...selected, ...newValues, equipment: equipmentInputs.filter(e => e.trim() !== "") });
             }}
           >
             {/* Fulle */}
@@ -190,11 +191,37 @@ export default function DepotPopup(props: DepotPopupProps) {
               </button>
               <button
                 type="button"
-                style={{ background: '#a0aec0', color: 'white', padding: '8px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 18 }}
+                style={{ background: '#a0aec0', color: 'white', padding: '4px 8px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 18, minWidth: 60 }}
                 onClick={() => { setEditMode(false); setEditValues({}); }}
               >
                 Avbryt
               </button>
+              <button
+                type="button"
+                style={{ background: '#e53e3e', color: 'white', padding: '4px 8px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 14, minWidth: 32 }}
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Slett depot
+              </button>
+        {showDeleteConfirm && (
+          <div style={{ position: 'absolute', top: 40, left: 0, right: 0, margin: 'auto', background: '#fff', border: '2px solid #e53e3e', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', padding: 18, zIndex: 1000, maxWidth: 320, textAlign: 'center' }}>
+            <div style={{ fontWeight: 'bold', color: '#e53e3e', fontSize: 18, marginBottom: 12 }}>Er du helt sikker på at du vil slette depotet?</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+              <button
+                style={{ background: '#e53e3e', color: 'white', padding: '6px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 16 }}
+                onClick={() => { deletePin(selected); setShowDeleteConfirm(false); }}
+              >
+                Slett
+              </button>
+              <button
+                style={{ background: '#a0aec0', color: 'white', padding: '6px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 16 }}
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        )}
             </div>
           </form>
         ) : (
@@ -206,23 +233,23 @@ export default function DepotPopup(props: DepotPopupProps) {
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Fuelhenger:</b> <span style={{ color: '#444' }}>{selected.trailer}</span></p>
             <div style={{ margin: '4px 0', width: '100%' }}>
               <b style={{ color: '#222', fontSize: 16 }}>Utstyr:</b>
-              {((selected.equipment && selected.equipment.length > 0) || (editValues.equipment && editValues.equipment.length > 0)) ? (
+              {(selected.equipment && selected.equipment.length > 0) ? (
                 <>
-                  {(showAllEquipment ? (selected.equipment || editValues.equipment) : (selected.equipment || editValues.equipment)?.slice(0, 3)).map((eq, idx) => (
+                  {(showAllEquipment ? selected.equipment : selected.equipment.slice(0, 3)).map((eq, idx) => (
                     <div key={idx} style={{ color: '#444', fontSize: 16, margin: '2px 0', textAlign: 'left' }}>{eq}</div>
                   ))}
-                  {((selected.equipment || editValues.equipment)?.length > 3) && (
+                  {selected.equipment.length > 3 && (
                     <button
                       type="button"
                       style={{ background: '#3182ce', color: 'white', fontSize: 14, borderRadius: 4, border: 'none', padding: '2px 8px', marginTop: 2 }}
                       onClick={() => setShowAllEquipment(v => !v)}
                     >
-                      {showAllEquipment ? 'Vis mindre' : `Vis alle (${(selected.equipment || editValues.equipment).length})`}
+                      {showAllEquipment ? 'Vis mindre' : `Vis alle (${selected.equipment.length})`}
                     </button>
                   )}
                 </>
               ) : (
-                <span style={{ color: '#444', fontSize: 16, marginLeft: 8 }}>-</span>
+                <span style={{ color: '#444', fontSize: 16, marginLeft: 8 }}>Ingen</span>
               )}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
@@ -231,12 +258,6 @@ export default function DepotPopup(props: DepotPopupProps) {
                 onClick={() => setEditMode(true)}
               >
                 Rediger
-              </button>
-              <button
-                style={{ background: '#e53e3e', color: 'white', padding: '8px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 18 }}
-                onClick={() => deletePin(selected)}
-              >
-                Slett depot
               </button>
             </div>
           </>
