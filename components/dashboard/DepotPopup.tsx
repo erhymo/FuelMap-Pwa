@@ -117,13 +117,12 @@ export default function DepotPopup(props: DepotPopupProps) {
               setEditValues({});
             }}
           >
-            {/* Typevalg dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', marginBottom: 18, width: '100%' }}>
-              <span style={{ fontSize: 22, fontWeight: 'bold', color: '#222', marginRight: 18, minWidth: 90 }}>Type</span>
+            {/* Typevalg dropdown (mer moderne og kompakt) */}
+            <div style={{ width: '100%', marginBottom: 12, textAlign: 'center' }}>
               <select
                 value={editValues.type ?? selected.type}
                 onChange={e => setEditValues({ ...editValues, type: e.target.value as Pin['type'] })}
-                style={{ fontSize: 20, padding: '6px 12px', borderRadius: 6, border: '1.5px solid #ccc', background: '#fff', color: '#222', minWidth: 120 }}
+                style={{ fontSize: 16, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #cbd5e1', background: '#f7fafc', color: '#222', minWidth: 120, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
               >
                 <option value="fueldepot">Fueldepot</option>
                 <option value="base">Base</option>
@@ -266,7 +265,6 @@ export default function DepotPopup(props: DepotPopupProps) {
           </form>
         ) : (
           <>
-            <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Type:</b> <span style={{ color: '#444' }}>{selected.type}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Fulle:</b> <span style={{ color: '#444' }}>{selected.fullBarrels}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tomme:</b> <span style={{ color: '#444' }}>{selected.emptyBarrels}</span></p>
             <p style={{ color: '#222', fontSize: 16, margin: '4px 0' }}><b>Tank:</b> <span style={{ color: '#444' }}>{selected.tank}</span></p>
