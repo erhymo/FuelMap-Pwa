@@ -55,18 +55,18 @@ export default function DepotPopup(props: DepotPopupProps) {
       position={{ lat: selected.lat, lng: selected.lng }}
       onCloseClick={() => setSelected(null)}
       options={{
-        maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 380 : 520,
+        maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 420 : 520,
         pixelOffset: new window.google.maps.Size(0, -40)
       }}
     >
       <div
         style={{
-          padding: typeof window !== 'undefined' && window.innerWidth < 600 ? 10 : 20,
+          padding: typeof window !== 'undefined' && window.innerWidth < 600 ? 8 : 20,
           background: 'white',
           borderRadius: 12,
           boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-          minWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 260px)' : 'min(98vw, 340px)',
-          maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 380px)' : 'min(98vw, 520px)',
+          minWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 300px)' : 'min(98vw, 340px)',
+          maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 'min(98vw, 420px)' : 'min(98vw, 520px)',
           width: '100%',
           maxHeight: 'calc(100vh - 32px)',
           boxSizing: 'border-box',
@@ -74,6 +74,7 @@ export default function DepotPopup(props: DepotPopupProps) {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 14 : undefined,
         }}
       >
         <div style={{ width: '100%', maxHeight: 'calc(100vh - 80px)', overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
