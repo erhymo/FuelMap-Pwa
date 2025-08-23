@@ -23,6 +23,7 @@ export default function DepotList({ pins, dropdownOpen, setDropdownOpen, flyTo, 
         <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-72 overflow-y-auto mt-2">
           <div className="mb-2 text-2xl font-extrabold text-black">Alle depoter:</div>
           {pins
+            .filter(pin => pin.name?.toLowerCase() !== "admin")
             .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
             .map((pin) => (
               <div
