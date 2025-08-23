@@ -9,7 +9,6 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
-  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { addLog } from "@/lib/log";
@@ -32,149 +31,189 @@ export default function AdminPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [newName, setNewName] = useState("");
   const [newPin, setNewPin] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [password, setPassword] = useState("");
+  const [tab, setTab] = useState<'ansatte' | 'logg' | 'database'>('ansatte');
+  const [error, setError] = useState<string>("");
 
-  // Hent ansatte
+  // Hent ansatte fra Firestore
   useEffect(() => {
+    if (!isLoggedIn) return;
     const unsub = onSnapshot(collection(db, "employees"), (snapshot) => {
-      setEmployees(
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Employee, "id">),
-        }))
-      );
+      setEmployees(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee)));
     });
     return () => unsub();
-  }, []);
+  }, [isLoggedIn]);
 
-  // Hent logg
+  // Hent logger fra Firestore
   useEffect(() => {
+    if (!isLoggedIn) return;
     const unsub = onSnapshot(collection(db, "logs"), (snapshot) => {
-      setLogs(
-        snapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...(doc.data() as Omit<LogEntry, "id">),
-          }))
-          .sort(
-            (a, b) =>
-              (b.timestamp?.seconds ?? 0) - (a.timestamp?.seconds ?? 0)
-          )
-      );
+      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LogEntry)));
     });
     return () => unsub();
-  }, []);
+  }, [isLoggedIn]);
+
+  // Admin passord
+  function handleLogin() {
+    if (password === "Bringeland") {
+      setIsLoggedIn(true);
+      setError("");
+    } else {
+      setError("Feil passord. Prøv igjen.");
+    }
+  }
 
   // Legg til ansatt
-  const handleAddEmployee = async () => {
-    if (!newName || !newPin) return;
-    await addDoc(collection(db, "employees"), {
-      name: newName,
-      pin: newPin,
-    });
-    await addLog("Admin", `La til ansatt: ${newName} (PIN: ${newPin})`);
-    setNewName("");
-    setNewPin("");
-  };
+  async function handleAddEmployee() {
+    if (!newName || !newPin) {
+      setError("Navn og PIN må fylles ut.");
+      return;
+    }
+    try {
+      await addDoc(collection(db, "employees"), { name: newName, pin: newPin });
+      setNewName("");
+      setNewPin("");
+      setError("");
+      await addLog("admin", `La til ansatt: ${newName}`);
+    } catch (e) {
+      setError("Kunne ikke legge til ansatt.");
+    }
+  }
 
   // Slett ansatt
-  const handleDeleteEmployee = async (id: string, name: string) => {
-    await deleteDoc(doc(db, "employees", id));
-    await addLog("Admin", `Slettet ansatt: ${name}`);
-  };
+  async function handleDeleteEmployee(id: string, name: string) {
+    try {
+      await deleteDoc(doc(db, "employees", id));
+      await addLog("admin", `Slettet ansatt: ${name}`);
+      setError("");
+    } catch (e) {
+      setError("Kunne ikke slette ansatt.");
+    }
+  }
 
-  // Oppdater ansatt
-  const handleUpdateEmployee = async (
-    id: string,
-    name: string,
-    pin: string
-  ) => {
-    await updateDoc(doc(db, "employees", id), { name, pin });
-    await addLog("Admin", `Oppdaterte ansatt: ${name} (PIN: ${pin})`);
-  };
-
-  return (
-    <div className="p-6 space-y-10">
-      <h1 className="text-3xl font-bold mb-4">Adminpanel</h1>
-
-      {/* Ansatte */}
-      <section>
-        <h2 className="text-xl font-semibold mb-2">Ansatte</h2>
-        <div className="flex gap-2 mb-4">
+  if (!isLoggedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
+        <div className="bg-white rounded-xl shadow-lg px-8 py-8 flex flex-col items-center w-full max-w-sm">
+          <h2 className="text-xl font-extrabold text-center mb-6 text-blue-900">Admin innlogging</h2>
           <input
-            type="text"
-            placeholder="Fullt navn"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="border px-2 py-1 rounded"
-          />
-          <input
-            type="text"
-            placeholder="PIN"
-            value={newPin}
-            onChange={(e) => setNewPin(e.target.value)}
-            className="border px-2 py-1 rounded w-24"
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Skriv inn admin-passord"
+            className="w-full border-2 border-gray-300 rounded-lg p-3 mb-5 text-center text-lg font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
           />
           <button
-            onClick={handleAddEmployee}
-            className="bg-blue-600 text-white px-4 py-1 rounded"
+            onClick={handleLogin}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg shadow hover:bg-blue-700 transition"
           >
-            Legg til
+            Logg inn
           </button>
+          {error && <p className="text-red-500 mt-4 font-bold text-center">{error}</p>}
         </div>
+      </div>
+    );
+  }
 
-        <ul className="space-y-2">
-          {employees.map((emp) => (
-            <li
-              key={emp.id}
-              className="flex items-center justify-between border p-2 rounded"
-            >
-              <div>
-                <span className="font-medium">{emp.name}</span> — PIN:{" "}
-                <span className="font-mono">{emp.pin}</span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() =>
-                    handleUpdateEmployee(emp.id, emp.name, emp.pin)
-                  }
-                  className="bg-yellow-500 text-white px-3 py-1 rounded"
-                >
-                  Oppdater
-                </button>
-                <button
-                  onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                  className="bg-red-600 text-white px-3 py-1 rounded"
-                >
-                  Slett
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+  return (
+    <div className="p-8 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Adminpanel</h1>
+      <div className="flex gap-4 mb-8">
+        <button
+          className={`px-4 py-2 rounded font-bold ${tab === 'ansatte' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setTab('ansatte')}
+        >
+          Ansatte
+        </button>
+        <button
+          className={`px-4 py-2 rounded font-bold ${tab === 'logg' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setTab('logg')}
+        >
+          Logg
+        </button>
+        <button
+          className={`px-4 py-2 rounded font-bold ${tab === 'database' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setTab('database')}
+        >
+          Database
+        </button>
+      </div>
 
-      {/* Logg */}
-      <section>
-        <h2 className="text-xl font-semibold mb-2">Logg</h2>
-        <ul className="space-y-1">
-          {logs.map((log) => (
-            <li
-              key={log.id}
-              className="text-sm border-b py-1"
+      {/* Ansatte-fanen */}
+      {tab === 'ansatte' && (
+        <section>
+          <h2 className="text-xl font-semibold mb-2">Ansatte</h2>
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Fullt navn"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="border px-2 py-1 rounded"
+            />
+            <input
+              type="text"
+              placeholder="PIN"
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value)}
+              className="border px-2 py-1 rounded w-24"
+            />
+            <button
+              onClick={handleAddEmployee}
+              className="bg-blue-600 text-white px-4 py-1 rounded"
             >
-              <span className="font-medium">{log.user}</span>:{" "}
-              {log.action}{" "}
-              <span className="text-gray-500">
-                (
-                {log.timestamp
-                  ? new Date(log.timestamp.seconds * 1000).toLocaleString()
-                  : "ukjent tid"}
-                )
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+              Legg til
+            </button>
+          </div>
+
+          <ul className="space-y-2">
+            {employees
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((emp) => (
+                <li
+                  key={emp.id}
+                  className="flex items-center justify-between border p-2 rounded"
+                >
+                  <div>
+                    <span className="font-medium">{emp.name}</span> — PIN: <span className="font-mono">{emp.pin}</span>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                    className="bg-red-600 text-white px-3 py-1 rounded"
+                  >
+                    Slett
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Logg-fanen */}
+      {tab === 'logg' && (
+        <section>
+          <h2 className="text-xl font-semibold mb-2">Logg</h2>
+          <ul className="space-y-1">
+            {logs.map((log) => (
+              <li
+                key={log.id}
+                className="text-sm border-b py-1"
+              >
+                <span className="font-medium">{log.user}</span>: {log.action} <span className="text-gray-500">({log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"})</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Database-fanen (placeholder) */}
+      {tab === 'database' && (
+        <section>
+          <h2 className="text-xl font-semibold mb-2">Database</h2>
+          <p>Backup og gjenoppretting av fueldepot kommer.</p>
+        </section>
+      )}
     </div>
   );
 }
