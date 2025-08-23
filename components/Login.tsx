@@ -35,31 +35,34 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
+      <div className="flex flex-col items-center w-full">
         <Image
           src="/Airlift-logo.png"
           alt="Airlift logo"
-          width={128}
-          height={128}
-          className="mb-4 w-32 h-32 object-contain"
+          width={180}
+          height={60}
+          className="mb-6 object-contain"
         />
-  <Image src="/Airlift-logo.png" alt="Airlift logo" width={128} height={128} className="mb-4 w-32 h-32 object-contain" />
-  <h1 className="text-2xl font-extrabold mb-4 text-gray-900 text-center">Logg inn</h1>
-        <input
-          type="password"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Skriv inn 4-sifret PIN"
-          maxLength={4}
-          className="w-full border rounded p-2 mb-3 text-center tracking-widest text-2xl font-bold text-gray-900 placeholder-gray-700"
-        />
-        <button
-          onClick={handleLogin}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-lg font-extrabold"
-        >
-          Logg inn
-        </button>
-  {error && <p className="text-red-500 mt-3 font-bold">{error}</p>}
+        <div className="bg-white rounded-xl shadow-lg px-8 py-8 flex flex-col items-center w-full max-w-sm">
+          <h2 className="text-xl font-extrabold text-center mb-6 text-blue-900">Logg inn med PIN</h2>
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="Skriv inn 4-sifret PIN"
+            maxLength={4}
+            className="w-full border-2 border-gray-300 rounded-lg p-3 mb-5 text-center text-lg font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+          />
+          <button
+            onClick={handleLogin}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg shadow hover:bg-blue-700 transition"
+          >
+            Logg inn
+          </button>
+          {error && <p className="text-red-500 mt-4 font-bold text-center">{error}</p>}
+        </div>
       </div>
+    </div>
   );
 }
