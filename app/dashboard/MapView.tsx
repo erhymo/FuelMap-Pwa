@@ -247,22 +247,37 @@ export default function MapView() {
       />
       {/* Popup for nytt depot etter kartklikk */}
       {showNewDepotPopup && (
-        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 100, background: 'white', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', padding: 24, minWidth: 320, maxWidth: 400 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>Opprett nytt depot</h2>
-          <label style={{ fontWeight: 500 }}>Navn</label>
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 100,
+            background: 'white',
+            borderRadius: 12,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+            padding: typeof window !== 'undefined' && window.innerWidth < 600 ? 12 : 24,
+            minWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 260 : 320,
+            maxWidth: typeof window !== 'undefined' && window.innerWidth < 600 ? 340 : 400,
+            width: '100%',
+          }}
+        >
+          <h2 style={{ fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 20 : 24, fontWeight: 700, marginBottom: 12, color: '#222', letterSpacing: 0.2 }}>Opprett nytt depot</h2>
+          <label style={{ fontWeight: 700, color: '#222', fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 18 }}>Navn</label>
           <input
             type="text"
             value={newDepot.name}
             onChange={e => setNewDepot({ ...newDepot, name: e.target.value })}
-            style={{ border: '1.5px solid #ccc', borderRadius: 6, padding: '8px 12px', fontSize: 18, width: '100%', marginBottom: 12 }}
+            style={{ border: '1.5px solid #222', borderRadius: 6, padding: '8px 12px', fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 18, width: '100%', marginBottom: 12, color: '#222', background: '#fff' }}
             placeholder="Navn på depotet"
             autoFocus
           />
-          <label style={{ fontWeight: 500 }}>Type</label>
+          <label style={{ fontWeight: 700, color: '#222', fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 18 }}>Type</label>
           <select
             value={newDepot.type}
             onChange={e => setNewDepot({ ...newDepot, type: e.target.value as Pin['type'] })}
-            style={{ border: '1.5px solid #ccc', borderRadius: 6, padding: '8px 12px', fontSize: 18, width: '100%', marginBottom: 12 }}
+            style={{ border: '1.5px solid #222', borderRadius: 6, padding: '8px 12px', fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 18, width: '100%', marginBottom: 12, color: '#222', background: '#fff' }}
           >
             <option value="fueldepot">Fueldepot</option>
             <option value="base">Base</option>
@@ -270,14 +285,14 @@ export default function MapView() {
           </select>
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
             <button
-              style={{ background: '#38a169', color: 'white', padding: '8px 24px', borderRadius: 6, border: 'none', fontWeight: 'bold', fontSize: 18 }}
+              style={{ background: '#38a169', color: 'white', padding: typeof window !== 'undefined' && window.innerWidth < 600 ? '8px 16px' : '8px 24px', borderRadius: 6, border: 'none', fontWeight: 'bold', fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 18 }}
               onClick={handleSaveNewDepot}
               disabled={!newDepot.name}
             >
               Lagre
             </button>
             <button
-              style={{ background: '#a0aec0', color: 'white', padding: '8px 24px', borderRadius: 6, border: 'none', fontWeight: 'bold', fontSize: 18 }}
+              style={{ background: '#a0aec0', color: 'white', padding: typeof window !== 'undefined' && window.innerWidth < 600 ? '8px 16px' : '8px 24px', borderRadius: 6, border: 'none', fontWeight: 'bold', fontSize: typeof window !== 'undefined' && window.innerWidth < 600 ? 16 : 18 }}
               onClick={() => setShowNewDepotPopup(false)}
             >
               Avbryt
