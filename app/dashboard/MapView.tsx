@@ -173,16 +173,15 @@ export default function MapView() {
   };
 
   const handleManualEdit = async (pin: Pin) => {
-  const updateData: Record<string, unknown> = {};
-    for (const field of Object.keys(editValues) as Array<keyof Pin | "newEquipment">) {
-      let value = editValues[field as keyof typeof editValues];
-      if (field === "equipment" || field === "newEquipment") continue;
-      value = Number(value);
-      if (isNaN(value)) continue;
-      updateData[field] = value;
+    const updateData: Record<string, unknown> = {};
+    for (const field of Object.keys(pin) as Array<keyof Pin>) {
+      if (field === "id" || field === "images" || field === "createdAt") continue;
+      if (field === "equipment") {
+        updateData.equipment = pin.equipment;
+        continue;
+      }
+      updateData[field] = pin[field];
     }
-    if (editValues.equipment) updateData.equipment = editValues.equipment;
-    if (editValues.note !== undefined) updateData.note = editValues.note;
     await updateDoc(doc(db, "pins", pin.id), updateData);
     setEditValues({});
     setEditMode(false);
@@ -317,6 +316,28 @@ export default function MapView() {
       >
         {pins.map((pin) => {
           const size = sizeForZoom(zoom);
+          if (pin.type === "helipad") {
+            return (
+              <MarkerF
+                key={pin.id}
+                position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
+                onClick={() => {
+                  const pos = { lat: Number(pin.lat), lng: Number(pin.lng) };
+                  setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
+                  setEditMode(false);
+                  setShowDeleteConfirm(false);
+                  setShowEquip(false);
+                  setShowNote(false);
+                  if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
+                }}
+                icon={{
+                  url: HELIPAD_ICON_URL,
+                  scaledSize: new google.maps.Size(size, size),
+                  anchor: new google.maps.Point(Math.floor(size/2), Math.floor(size/2)),
+                }}
+              />
+            );
+          }
           return (
             <MarkerF
               key={pin.id}
@@ -338,7 +359,7 @@ export default function MapView() {
                       ? (pin.fullBarrels > 2
                           ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
                           : "http://maps.google.com/mapfiles/ms/icons/red-dot.png")
-                      : "https://maps.google.com/mapfiles/kml/shapes/heliport.png",
+                      : undefined,
                 scaledSize: new google.maps.Size(size, size),
               }}
             />
@@ -428,6 +449,7 @@ export default function MapView() {
             addEquipment={addEquipment}
             removeEquipment={removeEquipment}
             setShowDeleteConfirm={setShowDeleteConfirm}
+            showDeleteConfirm={showDeleteConfirm}
             deletePin={deletePin}
             setSelected={setSelected}
           />
