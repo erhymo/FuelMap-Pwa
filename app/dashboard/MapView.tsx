@@ -43,6 +43,7 @@ export default function MapView() {
   const [zoom, setZoom] = useState<number>(6);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [editValues, setEditValues] = useState<Partial<Pin> & { newEquipment?: string }>({});
+  const [hoveredPin, setHoveredPin] = useState<string | null>(null);
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -185,6 +186,8 @@ export default function MapView() {
             setShowNote(false);
             if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
           }}
+          onMouseOver={() => setHoveredPin(pin.id)}
+          onMouseOut={() => setHoveredPin(null)}
           icon={{
             url: FUELFAT_ICON(color),
             scaledSize: new window.google.maps.Size(size, size),
@@ -373,6 +376,29 @@ export default function MapView() {
             deletePin={deletePin}
           />
         )}
+        {hoveredPin && (() => {
+          const pin = pins.find(p => p.id === hoveredPin);
+          if (!pin) return null;
+          return (
+            <div style={{
+              position: 'absolute',
+              left: '50%',
+              top: '16px',
+              transform: 'translateX(-50%)',
+              background: '#fff',
+              color: '#222',
+              fontWeight: 'bold',
+              fontSize: 18,
+              padding: '6px 18px',
+              borderRadius: 8,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              zIndex: 99999,
+              pointerEvents: 'none',
+            }}>
+              {pin.name}
+            </div>
+          );
+        })()}
       </GoogleMap>
     </div>
   );

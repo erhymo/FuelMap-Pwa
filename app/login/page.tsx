@@ -7,7 +7,8 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = (id: string) => {
-    localStorage.setItem("fuelmap_session", JSON.stringify({ employeeId: id, expires: Date.now() + 24 * 60 * 60 * 1000 }));
+    // 6 timer utløp
+    localStorage.setItem("fuelmap_session", JSON.stringify({ employeeId: id, expires: Date.now() + 6 * 60 * 60 * 1000 }));
     router.push("/dashboard");
   };
 
