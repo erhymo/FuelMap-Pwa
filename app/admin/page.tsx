@@ -205,7 +205,7 @@ export default function AdminPage() {
       {tab === 'logg' && (
         <section>
           <h2 className="text-xl font-semibold mb-4">Logg</h2>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {[...logs]
               .sort((a, b) => {
                 const ta = a.timestamp?.seconds ?? 0;
@@ -215,14 +215,12 @@ export default function AdminPage() {
               .map((log) => (
                 <div
                   key={log.id}
-                  className="bg-gray-900 rounded-lg px-4 py-3 flex flex-col border border-gray-700 shadow"
-                  style={{ minHeight: 48 }}
+                  className="bg-gray-900 rounded px-4 py-2 flex flex-row items-center border border-gray-700 shadow text-white text-base"
+                  style={{ minHeight: 36, fontWeight: 500 }}
                 >
-                  <div className="flex flex-row items-center gap-2 mb-1">
-                    <span className="font-bold text-blue-300 text-base">{log.employeeName || 'System'}</span>
-                    <span className="text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"}</span>
-                  </div>
-                  <div className="text-white text-sm font-semibold" style={{ wordBreak: 'break-word' }}>{log.action || <span className="italic text-gray-400">Ingen handling</span>}</div>
+                  <span style={{ color: '#60a5fa', fontWeight: 700, marginRight: 12 }}>{log.employeeName || 'Ukjent'}</span>
+                  <span style={{ color: '#cbd5e1', marginRight: 12 }}>{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"}</span>
+                  <span style={{ wordBreak: 'break-word' }}>{log.action || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Ingen handling</span>}</span>
                 </div>
               ))}
           </div>
