@@ -53,6 +53,13 @@ export function useAddDepot(pins: Pin[], setPins: (pins: Pin[]) => void) {
         ...pins,
         { ...pin, id: docRef.id },
       ]);
+      // Logg opprettelse av depot
+      try {
+        const { addLog } = await import("@/lib/log");
+        await addLog(`La til depot: ${pin.name}`, undefined, undefined);
+      } catch (err) {
+        console.error("Kunne ikke logge depot-opprettelse", err);
+      }
       setSelected({
         id: "",
         lat: 0,
