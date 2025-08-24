@@ -213,18 +213,18 @@ export default function AdminPage() {
                 return tb - ta;
               })
               .map((log) => (
-              <div
-                key={log.id}
-                className="bg-gray-900 rounded-lg px-4 py-3 flex flex-col border border-gray-700 shadow"
-                style={{ minHeight: 48 }}
-              >
-                <div className="flex flex-row items-center gap-2 mb-1">
-                  <span className="font-bold text-blue-300 text-base">{log.employeeName || 'System'}</span>
-                  <span className="text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"}</span>
+                <div
+                  key={log.id}
+                  className="bg-gray-900 rounded-lg px-4 py-3 flex flex-col border border-gray-700 shadow"
+                  style={{ minHeight: 48 }}
+                >
+                  <div className="flex flex-row items-center gap-2 mb-1">
+                    <span className="font-bold text-blue-300 text-base">{log.employeeName || 'System'}</span>
+                    <span className="text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : "ukjent tid"}</span>
+                  </div>
+                  <div className="text-white text-sm font-semibold" style={{ wordBreak: 'break-word' }}>{log.action || <span className="italic text-gray-400">Ingen handling</span>}</div>
                 </div>
-                <div className="text-white text-sm" style={{ wordBreak: 'break-word' }}>{log.action}</div>
-              </div>
-            ))}
+              ))}
           </div>
         </section>
       )}
