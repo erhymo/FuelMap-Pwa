@@ -100,15 +100,18 @@ export default function DepotPopup(props: DepotPopupProps) {
                   const { id, ...rest } = { ...selected, ...newValues };
                   const { doc, updateDoc, addDoc, collection } = await import("firebase/firestore");
                   const { db } = await import("@/lib/firebase");
+                  const { addLog } = await import("@/lib/log");
                   if (id === "new") {
                     // Opprett nytt depot
                     const docRef = await addDoc(collection(db, "pins"), rest);
+                    await addLog(`Opprettet depot: ${rest.name}`);
                     if (props.setSelected) {
                       props.setSelected({ ...rest, id: docRef.id });
                     }
                   } else {
                     // Oppdater eksisterende depot
                     await updateDoc(doc(db, "pins", id), rest);
+                    await addLog(`Endret depot: ${rest.name}`);
                     if (props.setSelected) {
                       props.setSelected({ ...selected, ...newValues });
                     }
@@ -225,7 +228,15 @@ export default function DepotPopup(props: DepotPopupProps) {
               <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
                 <button
                   style={{ background: '#e53e3e', color: 'white', padding: '6px 16px', borderRadius: 4, border: 'none', fontWeight: 'bold', fontSize: 16 }}
-                  onClick={() => { deletePin(selected); setShowDeleteConfirm(false); }}
+                  onClick={async () => {
+                    try {
+                      const { addLog } = await import("@/lib/log");
+                      await addLog(`Slettet depot: ${selected.name}`);
+                    } catch (err) {
+                      console.error("Kunne ikke logge sletting", err);
+                    }
+                    deletePin(selected); setShowDeleteConfirm(false);
+                  }}
                 >
                   Slett
                 </button>

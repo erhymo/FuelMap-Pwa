@@ -148,6 +148,9 @@ export default function MapView() {
     } else if (pin.type === "fueldepot") {
       zIndex = 10;
     }
+    // Felles hover for alle typer
+    const handleMouseOver = () => setHoveredPin(pin.id);
+    const handleMouseOut = () => setHoveredPin(null);
     if (pin.type === "helipad") {
       return (
         <MarkerF
@@ -162,6 +165,8 @@ export default function MapView() {
             setShowNote(false);
             if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
           }}
+          onMouseOver={handleMouseOver}
+          onMouseOut={handleMouseOut}
           icon={{
             url: HELIPAD_ICON_URL,
             scaledSize: new window.google.maps.Size(size, size),
@@ -186,8 +191,8 @@ export default function MapView() {
             setShowNote(false);
             if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
           }}
-          onMouseOver={() => setHoveredPin(pin.id)}
-          onMouseOut={() => setHoveredPin(null)}
+          onMouseOver={handleMouseOver}
+          onMouseOut={handleMouseOut}
           icon={{
             url: FUELFAT_ICON(color),
             scaledSize: new window.google.maps.Size(size, size),
@@ -197,6 +202,7 @@ export default function MapView() {
         />
       );
     }
+    // Base
     return (
       <MarkerF
         key={pin.id}
@@ -210,6 +216,8 @@ export default function MapView() {
           setShowNote(false);
           if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
         }}
+        onMouseOver={handleMouseOver}
+        onMouseOut={handleMouseOut}
         icon={{
           url:
             pin.type === "base"
