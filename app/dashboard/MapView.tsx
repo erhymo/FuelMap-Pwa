@@ -17,6 +17,12 @@ const mapContainerStyle = { width: "100%", height: "100vh" };
 
 const HELIPAD_SVG = `<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" role=\"img\" aria-label=\"Helipad\"><circle cx=\"32\" cy=\"32\" r=\"30\" fill=\"#FFD200\" stroke=\"#000000\" stroke-width=\"2\"/><rect x=\"18\" y=\"14\" width=\"8\" height=\"36\" fill=\"#000000\" rx=\"1\"/><rect x=\"38\" y=\"14\" width=\"8\" height=\"36\" fill=\"#000000\" rx=\"1\"/><rect x=\"18\" y=\"29\" width=\"28\" height=\"6\" fill=\"#000000\" rx=\"1\"/></svg>`;
 const HELIPAD_ICON_URL = `data:image/svg+xml;utf8,${encodeURIComponent(HELIPAD_SVG)}`;
+const FUELFAT_ICON = '/fuelfat.svg';
+function getFuelFatColor(fullBarrels: number) {
+  if (fullBarrels > 2) return '#38a169'; // grønn
+  if (fullBarrels > 0) return '#FFD600'; // gul
+  return '#e53e3e'; // rød
+}
 
 function sizeForZoom(zoom: number | undefined, min=24, max=48, zMin=5, zMax=12) {
   if (zoom === undefined || zoom === null) return max;
@@ -131,7 +137,6 @@ export default function MapView() {
 
   const markers = pins.map((pin) => {
     const size = sizeForZoom(zoom);
-    // zIndex: selected > helipad > base > fueldepot
     let zIndex = 1;
     if (selected && selected.id === pin.id) {
       zIndex = 100;
@@ -162,6 +167,36 @@ export default function MapView() {
             anchor: new window.google.maps.Point(Math.floor(size/2), Math.floor(size/2)),
           }}
           zIndex={zIndex}
+        />
+      );
+    }
+    if (pin.type === "fueldepot") {
+      return (
+        <MarkerF
+          key={pin.id}
+          position={{ lat: Number(pin.lat), lng: Number(pin.lng) }}
+          onClick={() => {
+            const pos = { lat: Number(pin.lat), lng: Number(pin.lng) };
+            setSelected({ ...pin, equipment: ensureArray(pin.equipment) });
+            setEditMode(false);
+            setShowDeleteConfirm(false);
+            setShowEquip(false);
+            setShowNote(false);
+            if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
+          }}
+          icon={{
+            url: FUELFAT_ICON,
+            scaledSize: new window.google.maps.Size(size, size),
+            anchor: new window.google.maps.Point(Math.floor(size/2), Math.floor(size/2)),
+            labelOrigin: new window.google.maps.Point(Math.floor(size/2), size + 8),
+          }}
+          zIndex={zIndex}
+          label={{
+            text: '',
+            color: getFuelFatColor(pin.fullBarrels),
+            fontWeight: 'bold',
+            fontSize: '16px',
+          }}
         />
       );
     }
