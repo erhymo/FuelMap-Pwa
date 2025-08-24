@@ -17,7 +17,7 @@ const mapContainerStyle = { width: "100%", height: "100vh" };
 
 const HELIPAD_SVG = `<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" role=\"img\" aria-label=\"Helipad\"><circle cx=\"32\" cy=\"32\" r=\"30\" fill=\"#FFD200\" stroke=\"#000000\" stroke-width=\"2\"/><rect x=\"18\" y=\"14\" width=\"8\" height=\"36\" fill=\"#000000\" rx=\"1\"/><rect x=\"38\" y=\"14\" width=\"8\" height=\"36\" fill=\"#000000\" rx=\"1\"/><rect x=\"18\" y=\"29\" width=\"28\" height=\"6\" fill=\"#000000\" rx=\"1\"/></svg>`;
 const HELIPAD_ICON_URL = `data:image/svg+xml;utf8,${encodeURIComponent(HELIPAD_SVG)}`;
-const FUELFAT_ICON = '/fuelfat.svg';
+const FUELFAT_ICON = (color: string) => `data:image/svg+xml;utf8,<svg width='32' height='32' viewBox='0 0 32 32' fill='${encodeURIComponent(color)}' xmlns='http://www.w3.org/2000/svg'><ellipse cx='16' cy='8' rx='10' ry='4' fill='${encodeURIComponent(color)}' stroke='%23222' stroke-width='2'/><rect x='6' y='8' width='20' height='14' rx='6' fill='${encodeURIComponent(color)}' stroke='%23222' stroke-width='2'/><ellipse cx='16' cy='22' rx='10' ry='4' fill='${encodeURIComponent(color)}' stroke='%23222' stroke-width='2'/></svg>`;
 function getFuelFatColor(fullBarrels: number) {
   if (fullBarrels > 2) return '#38a169'; // grønn
   if (fullBarrels > 0) return '#FFD600'; // gul
@@ -171,6 +171,7 @@ export default function MapView() {
       );
     }
     if (pin.type === "fueldepot") {
+      const color = getFuelFatColor(pin.fullBarrels);
       return (
         <MarkerF
           key={pin.id}
@@ -185,18 +186,11 @@ export default function MapView() {
             if (mapRef.current) setTimeout(() => panMarkerIntoView(mapRef.current!, pos), 0);
           }}
           icon={{
-            url: FUELFAT_ICON,
+            url: FUELFAT_ICON(color),
             scaledSize: new window.google.maps.Size(size, size),
             anchor: new window.google.maps.Point(Math.floor(size/2), Math.floor(size/2)),
-            labelOrigin: new window.google.maps.Point(Math.floor(size/2), size + 8),
           }}
           zIndex={zIndex}
-          label={{
-            text: '',
-            color: getFuelFatColor(pin.fullBarrels),
-            fontWeight: 'bold',
-            fontSize: '16px',
-          }}
         />
       );
     }
