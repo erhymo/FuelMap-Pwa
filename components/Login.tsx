@@ -9,7 +9,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface LoginProps {
-  onLogin: (employeeId: string) => void;
+  onLogin: (employeeId: string, employeeName: string) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
@@ -24,7 +24,8 @@ export default function Login({ onLogin }: LoginProps) {
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
         const employeeId = doc.id;
-        onLogin(employeeId);
+        const employeeName = doc.data().name || "Ukjent";
+        onLogin(employeeId, employeeName);
       } else {
         setError("Feil PIN-kode");
       }

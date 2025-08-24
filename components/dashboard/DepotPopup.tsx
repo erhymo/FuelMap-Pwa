@@ -101,17 +101,27 @@ export default function DepotPopup(props: DepotPopupProps) {
                   const { doc, updateDoc, addDoc, collection } = await import("firebase/firestore");
                   const { db } = await import("@/lib/firebase");
                   const { addLog } = await import("@/lib/log");
+                  let employeeName = "Ukjent";
+                  if (typeof window !== "undefined") {
+                    try {
+                      const session = localStorage.getItem("fuelmap_session");
+                      if (session) {
+                        const obj = JSON.parse(session);
+                        if (obj.employeeName) employeeName = obj.employeeName;
+                      }
+                    } catch {}
+                  }
                   if (id === "new") {
                     // Opprett nytt depot
                     const docRef = await addDoc(collection(db, "pins"), rest);
-                    await addLog(`Opprettet depot: ${rest.name}`);
+                    await addLog(`Opprettet depot: ${rest.name}`, undefined, employeeName);
                     if (props.setSelected) {
                       props.setSelected({ ...rest, id: docRef.id });
                     }
                   } else {
                     // Oppdater eksisterende depot
                     await updateDoc(doc(db, "pins", id), rest);
-                    await addLog(`Endret depot: ${rest.name}`);
+                    await addLog(`Endret depot: ${rest.name}`, undefined, employeeName);
                     if (props.setSelected) {
                       props.setSelected({ ...selected, ...newValues });
                     }
@@ -231,7 +241,17 @@ export default function DepotPopup(props: DepotPopupProps) {
                   onClick={async () => {
                     try {
                       const { addLog } = await import("@/lib/log");
-                      await addLog(`Slettet depot: ${selected.name}`);
+                      let employeeName = "Ukjent";
+                      if (typeof window !== "undefined") {
+                        try {
+                          const session = localStorage.getItem("fuelmap_session");
+                          if (session) {
+                            const obj = JSON.parse(session);
+                            if (obj.employeeName) employeeName = obj.employeeName;
+                          }
+                        } catch {}
+                      }
+                      await addLog(`Slettet depot: ${selected.name}`, undefined, employeeName);
                     } catch (err) {
                       console.error("Kunne ikke logge sletting", err);
                     }

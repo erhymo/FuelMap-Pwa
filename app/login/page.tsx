@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
 
-  const handleLogin = (id: string) => {
+  const handleLogin = (id: string, name: string) => {
     // 6 timer utløp
-    localStorage.setItem("fuelmap_session", JSON.stringify({ employeeId: id, expires: Date.now() + 6 * 60 * 60 * 1000 }));
+    localStorage.setItem("fuelmap_session", JSON.stringify({ employeeId: id, employeeName: name, expires: Date.now() + 6 * 60 * 60 * 1000 }));
     router.push("/dashboard");
   };
 
