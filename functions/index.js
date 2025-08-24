@@ -6,7 +6,7 @@ const db = admin.firestore();
 
 // 📌 Cron-jobb: backup to ganger i døgnet (kl. 00:00 og 12:00 norsk tid)
 exports.scheduledBackup = functions.pubsub
-  .schedule("0 0,12 * * *") // kjører 00:00 og 12:00 UTC (juster ved behov)
+  .schedule("0 */6 * * *") // kjører hver 6. time UTC
   .timeZone("Europe/Oslo")
   .onRun(async () => {
     console.log("Kjører automatisk backup...");

@@ -1,5 +1,3 @@
- 
-
 'use client';
 
 import { useState, useEffect } from "react";
@@ -27,6 +25,14 @@ type LogEntry = {
   timestamp?: { seconds: number; nanoseconds: number };
 };
 
+// Backup type
+type Backup = {
+  id: string;
+  createdAt?: { seconds: number; nanoseconds: number };
+  depots?: object[];
+  users?: object[];
+};
+
 export default function AdminPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -37,6 +43,13 @@ export default function AdminPage() {
   const [tab, setTab] = useState<'ansatte' | 'logg' | 'database'>('ansatte');
   const [error, setError] = useState<string>("");
   const [currentEmployee, setCurrentEmployee] = useState<{id: string, name: string} | null>(null);
+
+  // Backup UI state
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [restoreId, setRestoreId] = useState<string|null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState<string>("");
 
   // Hent ansatte fra Firestore
   useEffect(() => {
@@ -55,6 +68,24 @@ export default function AdminPage() {
     });
     return () => unsub();
   }, [isLoggedIn]);
+
+  // Hent backups fra Firestore (siste 3 dager)
+  useEffect(() => {
+    if (!isLoggedIn || tab !== 'database') return;
+    setLoadingBackups(true);
+    (async () => {
+      const now = Date.now();
+      const threeDaysAgo = now - 3 * 24 * 60 * 60 * 1000;
+      const { getDocs } = await import("firebase/firestore");
+      const snap = await getDocs(collection(db, "backups"));
+      const items = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Backup))
+        .filter(b => b.createdAt && typeof b.createdAt.seconds === 'number' && b.createdAt.seconds * 1000 > threeDaysAgo)
+        .sort((a, b) => ((b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)));
+      setBackups(items);
+      setLoadingBackups(false);
+    })();
+  }, [isLoggedIn, tab]);
 
   // Admin passord
   function handleLogin() {
@@ -100,6 +131,33 @@ export default function AdminPage() {
       setError("");
     } catch {
       setError("Kunne ikke slette ansatt.");
+    }
+  }
+
+  // Restore backup
+  async function handleRestore(id: string) {
+    setRestoreStatus("");
+    setShowConfirm(false);
+    setRestoreStatus("Gjenoppretter...");
+    try {
+      const { getDocs } = await import("firebase/firestore");
+      // Finn backup
+      const backupDoc = backups.find(b => b.id === id);
+      if (!backupDoc) throw new Error("Backup ikke funnet");
+      // Slett alle depots
+      const depotsSnap = await getDocs(collection(db, "depots"));
+      await Promise.all(depotsSnap.docs.map(d => deleteDoc(doc(db, "depots", d.id))));
+      // Skriv depots fra backup
+      await Promise.all((backupDoc.depots ?? []).map(depot => addDoc(collection(db, "depots"), depot)));
+      // Slett alle users
+      const usersSnap = await getDocs(collection(db, "users"));
+      await Promise.all(usersSnap.docs.map(u => deleteDoc(doc(db, "users", u.id))));
+      // Skriv users fra backup
+      await Promise.all((backupDoc.users ?? []).map(user => addDoc(collection(db, "users"), user)));
+      setRestoreStatus("Gjenoppretting fullført ✅");
+      await addLog(`Gjenopprettet backup ${id}`, currentEmployee?.id, currentEmployee?.name);
+    } catch {
+      setRestoreStatus("Feil under gjenoppretting");
     }
   }
 
@@ -230,8 +288,56 @@ export default function AdminPage() {
       {/* Database-fanen (placeholder) */}
       {tab === 'database' && (
         <section>
-          <h2 className="text-xl font-semibold mb-2">Database</h2>
-          <p>Backup og gjenoppretting av fueldepot kommer.</p>
+          <h2 className="text-xl font-semibold mb-2">Database backup</h2>
+          <p className="mb-4">Her kan du se og gjenopprette backups fra de siste 3 dagene.</p>
+          {loadingBackups ? (
+            <div>Laster backups...</div>
+          ) : backups.length === 0 ? (
+            <div>Ingen backups funnet.</div>
+          ) : (
+            <ul className="space-y-2 mb-4">
+              {backups.map(b => (
+                <li key={b.id} className="flex items-center justify-between border p-2 rounded">
+                  <div>
+                    <span className="font-semibold">{b.createdAt && typeof b.createdAt.seconds === 'number' ? new Date(b.createdAt.seconds * 1000).toLocaleString() : 'Ukjent tid'}</span>
+                    <span className="ml-2 text-gray-500">({(b.depots?.length ?? 0)} depots, {(b.users?.length ?? 0)} users)</span>
+                  </div>
+                  <button
+                    className="bg-blue-600 text-white px-3 py-1 rounded"
+                    onClick={() => { setRestoreId(b.id); setShowConfirm(true); }}
+                  >
+                    Gjenopprett
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {showConfirm && restoreId && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center">
+                <h3 className="text-lg font-bold mb-4">Bekreft gjenoppretting</h3>
+                <p className="mb-4">Er du sikker på at du vil gjenopprette backupen? Dette vil overskrive alle depots og users.</p>
+                <div className="flex gap-4">
+                  <button
+                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                    onClick={() => handleRestore(restoreId)}
+                  >
+                    Ja, gjenopprett
+                  </button>
+                  <button
+                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                    onClick={() => { setShowConfirm(false); setRestoreId(null); }}
+                  >
+                    Avbryt
+                  </button>
+                </div>
+                {restoreStatus && <p className="mt-4 font-semibold text-blue-700">{restoreStatus}</p>}
+              </div>
+            </div>
+          )}
+          {restoreStatus && !showConfirm && (
+            <div className="mt-4 font-semibold text-blue-700">{restoreStatus}</div>
+          )}
         </section>
       )}
     </div>
