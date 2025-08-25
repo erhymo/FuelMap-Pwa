@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { saveDepotOffline, setupDepotSync, syncDepotsOnline } from "@/lib/offlineSync";
 import EquipmentPopup from "./EquipmentPopup";
 import { InfoWindowF } from "@react-google-maps/api";
 
@@ -50,6 +51,15 @@ export default function DepotPopup(props: DepotPopupProps) {
       setEquipmentInputs(editValues.equipment ? [...editValues.equipment] : selected.equipment ? [...selected.equipment] : []);
     }
   }, [editMode, selected, editValues.equipment]);
+
+  // Setup offline sync on mount
+  React.useEffect(() => {
+    setupDepotSync(async (depot) => {
+      const { addDoc, collection } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase");
+      await addDoc(collection(db, "pins"), depot);
+    });
+  }, []);
   if (!selected) return null;
   return (
     <React.Fragment>
@@ -96,21 +106,29 @@ export default function DepotPopup(props: DepotPopupProps) {
                   tank: editValues.tank !== undefined ? Number(editValues.tank) : selected.tank,
                   trailer: editValues.trailer !== undefined ? Number(editValues.trailer) : selected.trailer,
                 };
+                const { id, ...rest } = { ...selected, ...newValues };
+                let employeeName = "Ukjent";
+                if (typeof window !== "undefined") {
+                  try {
+                    const session = localStorage.getItem("fuelmap_session");
+                    if (session) {
+                      const obj = JSON.parse(session);
+                      if (obj.employeeName) employeeName = obj.employeeName;
+                    }
+                  } catch {}
+                }
+                if (!window.navigator.onLine) {
+                  // Offline: lagre depot lokalt
+                  await saveDepotOffline(rest);
+                  setEditMode(false);
+                  setEditValues({});
+                  alert("Depot lagret lokalt. Endringen vil bli pushet når du får dekning.");
+                  return;
+                }
                 try {
-                  const { id, ...rest } = { ...selected, ...newValues };
                   const { doc, updateDoc, addDoc, collection } = await import("firebase/firestore");
                   const { db } = await import("@/lib/firebase");
                   const { addLog } = await import("@/lib/log");
-                  let employeeName = "Ukjent";
-                  if (typeof window !== "undefined") {
-                    try {
-                      const session = localStorage.getItem("fuelmap_session");
-                      if (session) {
-                        const obj = JSON.parse(session);
-                        if (obj.employeeName) employeeName = obj.employeeName;
-                      }
-                    } catch {}
-                  }
                   if (id === "new") {
                     // Opprett nytt depot
                     const docRef = await addDoc(collection(db, "pins"), rest);
