@@ -41,19 +41,20 @@ export default function EquipmentPopup({ equipment, onSave, onClose }: Equipment
       background: "rgba(0,0,0,0.18)",
       zIndex: 999999,
       display: "flex",
-      alignItems: isMobile ? "flex-end" : "center",
+      alignItems: "center",
       justifyContent: "center"
     }}>
       <div style={{
         background: "white",
-        borderRadius: isMobile ? "24px 24px 0 0" : 12,
-        boxShadow: "0 4px 32px rgba(0,0,0,0.22)",
-        padding: isMobile ? 16 : 24,
-        minWidth: isMobile ? '100vw' : 280,
-        maxWidth: isMobile ? '100vw' : 340,
-        width: isMobile ? '100vw' : '100%',
-        maxHeight: isMobile ? '60vh' : undefined,
-        display: "flex",
+  // ...existing code...
+  boxShadow: "0 4px 32px rgba(0,0,0,0.22)",
+  padding: isMobile ? 16 : 24,
+  minWidth: isMobile ? '100vw' : 280,
+  maxWidth: isMobile ? '100vw' : 340,
+  width: isMobile ? '100vw' : '100%',
+  maxHeight: isMobile ? '90vh' : undefined,
+  overflowY: isMobile ? 'auto' : undefined,
+  display: "flex",
         flexDirection: "column",
         alignItems: "center"
       }}>
