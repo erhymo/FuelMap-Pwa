@@ -20,7 +20,7 @@ export default function DepotList({ pins, dropdownOpen, setDropdownOpen, flyTo, 
         ☰
       </button>
       {dropdownOpen && (
-        <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-72 overflow-y-auto mt-2">
+  <div className="bg-white shadow-lg rounded-lg p-4 max-h-96 w-[340px] overflow-y-auto mt-2">
           <div className="mb-2 text-2xl font-extrabold text-black">Alle depoter:</div>
           {pins
             .filter(pin => pin.name?.toLowerCase() !== "admin" && (pin.type === "fueldepot" || pin.type === "helipad"))
@@ -30,8 +30,18 @@ export default function DepotList({ pins, dropdownOpen, setDropdownOpen, flyTo, 
                 key={pin.id}
                 className="flex items-center gap-2 px-2 py-2 rounded hover:bg-green-100 cursor-pointer"
                 onClick={() => flyTo(pin)}
+                style={{ minHeight: 38 }}
               >
-                <span className="font-bold text-lg text-black truncate">{pin.name}</span>
+                <span className="font-bold text-lg text-black truncate" style={{ minWidth: 90 }}>{pin.name}</span>
+                {/* FT og FH med antall liter */}
+                <span className="flex flex-col items-end justify-center mr-2" style={{ minWidth: 80 }}>
+                  {(pin.tank ?? 0) > 0 && (
+                    <span className="text-blue-700 text-xs font-semibold bg-blue-50 rounded px-2 py-0.5" style={{ marginBottom: 2 }}>FT: {pin.tank} L</span>
+                  )}
+                  {(pin.trailer ?? 0) > 0 && (
+                    <span className="text-green-700 text-xs font-semibold bg-green-50 rounded px-2 py-0.5">FH: {pin.trailer} L</span>
+                  )}
+                </span>
                 <span className="ml-auto flex flex-row items-center gap-2">
                   <span className="text-green-600 font-extrabold text-base tabular-nums">{pin.fullBarrels ?? 0}</span>
                   <span className="text-red-600 font-extrabold text-base tabular-nums">{pin.emptyBarrels ?? 0}</span>
