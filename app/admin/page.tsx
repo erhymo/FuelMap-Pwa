@@ -224,11 +224,11 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Adminpanel</h1>
-      <div className="bg-white rounded-xl shadow-lg px-8 py-4 flex flex-col items-center w-full max-w-md mx-auto mt-6 mb-4">
-        <h2 className="text-xl font-bold mb-2 text-blue-900">Innlogginger siste døgn</h2>
-        <div className="text-3xl font-extrabold text-green-700">{recentLoginCount}</div>
+      <div className="bg-white rounded-xl shadow-lg px-4 py-4 flex flex-col items-center w-full mt-6 mb-4" style={{ width: '100%' }}>
+        <h2 className="text-lg sm:text-xl font-bold mb-2 text-blue-900 text-center">Innlogginger siste døgn</h2>
+        <div className="text-4xl sm:text-5xl font-extrabold text-green-700 text-center">{recentLoginCount}</div>
       </div>
       <div className="flex gap-4 mb-8">
         <button
