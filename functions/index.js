@@ -13,16 +13,38 @@ export const scheduledBackup = onSchedule(
   async () => {
     console.log("Kjører automatisk backup...");
     try {
+      // Hent alle brukere
       const usersSnap = await db.collection("users").get();
-      const depotsSnap = await db.collection("depots").get();
       const users = [];
       usersSnap.forEach((doc) => users.push({ id: doc.id, ...doc.data() }));
+
+      // Hent alle depots
+      const depotsSnap = await db.collection("depots").get();
       const depots = [];
       depotsSnap.forEach((doc) => depots.push({ id: doc.id, ...doc.data() }));
+
+      // Hent alle base
+      const baseSnap = await db.collection("base").get();
+      const base = [];
+      baseSnap.forEach((doc) => base.push({ id: doc.id, ...doc.data() }));
+
+      // Hent alle fueldepots
+      const fueldepotsSnap = await db.collection("fueldepots").get();
+      const fueldepots = [];
+      fueldepotsSnap.forEach((doc) => fueldepots.push({ id: doc.id, ...doc.data() }));
+
+      // Hent alle helipad
+      const helipadSnap = await db.collection("helipad").get();
+      const helipad = [];
+      helipadSnap.forEach((doc) => helipad.push({ id: doc.id, ...doc.data() }));
+
       await db.collection("backups").add({
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         users,
         depots,
+        base,
+        fueldepots,
+        helipad,
       });
       console.log("Backup lagret ✅");
       return null;
