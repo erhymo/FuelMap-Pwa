@@ -34,11 +34,49 @@ type Backup = {
 };
 
 export default function AdminPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Antall innlogginger siste døgn
+  const [recentLoginCount, setRecentLoginCount] = useState(0);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const fetchLogins = async () => {
+      const now = Date.now();
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const { getDocs, query, collection, where } = await import("firebase/firestore");
+      // Sjekk at "login" er action for innlogging
+      const q = query(
+        collection(db, "logs"),
+        where("action", "==", "login"),
+        where("timestamp", ">", new Date(oneDayAgo))
+      );
+      const snap = await getDocs(q);
+      setRecentLoginCount(snap.size);
+    };
+    fetchLogins();
+  }, [isLoggedIn]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [newName, setNewName] = useState("");
   const [newPin, setNewPin] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Fjernet duplisert isLoggedIn
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const fetchLogins = async () => {
+      const now = Date.now();
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const { getDocs, query, collection, where } = await import("firebase/firestore");
+      // Sjekk at "login" er action for innlogging
+      const q = query(
+        collection(db, "logs"),
+        where("action", "==", "login"),
+        where("timestamp", ">", new Date(oneDayAgo))
+      );
+      const snap = await getDocs(q);
+      setRecentLoginCount(snap.size);
+    };
+    fetchLogins();
+  }, [isLoggedIn]);
   const [password, setPassword] = useState("");
   const [tab, setTab] = useState<'ansatte' | 'logg' | 'database'>('ansatte');
   const [error, setError] = useState<string>("");
@@ -188,6 +226,10 @@ export default function AdminPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Adminpanel</h1>
+      <div className="bg-white rounded-xl shadow-lg px-8 py-4 flex flex-col items-center w-full max-w-md mx-auto mt-6 mb-4">
+        <h2 className="text-xl font-bold mb-2 text-blue-900">Innlogginger siste døgn</h2>
+        <div className="text-3xl font-extrabold text-green-700">{recentLoginCount}</div>
+      </div>
       <div className="flex gap-4 mb-8">
         <button
           className={`px-4 py-2 rounded font-bold ${tab === 'ansatte' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
