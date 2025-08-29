@@ -95,18 +95,6 @@ export default function DepotPopup(props: DepotPopupProps) {
           {/* Depot name, centered (always visible) */}
           <div style={{ width: '100%', textAlign: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: 28, fontWeight: 'bold', color: '#222' }}>{editMode ? (editValues.name ?? selected.name) : selected.name}</span>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 6 }}>
-              {((editMode ? editValues.tank : selected.tank) ?? 0) > 0 && (
-                <span style={{ fontSize: 16, color: '#3182ce', fontWeight: 600, background: '#e6f7ff', borderRadius: 6, padding: '2px 8px' }}>
-                  FT: {(editMode ? editValues.tank : selected.tank) ?? 0} L
-                </span>
-              )}
-              {((editMode ? editValues.trailer : selected.trailer) ?? 0) > 0 && (
-                <span style={{ fontSize: 16, color: '#38a169', fontWeight: 600, background: '#e6fffa', borderRadius: 6, padding: '2px 8px' }}>
-                  H: {(editMode ? editValues.trailer : selected.trailer) ?? 0} L
-                </span>
-              )}
-            </div>
           </div>
           {editMode ? (
             <form
